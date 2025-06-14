@@ -1,0 +1,16 @@
+#:include screens/loginscreen.kv
+#:include screens/dashboard.kv
+#:include screens/adduser.kv
+GridLayout:
+    cols:1
+    ScreenManager:
+        id:screen_manager
+        LoginScreen:
+            name:"login_screen"
+            id:login_screen
+        DashboardScreen:
+            name:"dashboard_screen"
+            id:dashboard_screen
+        AddUserScreen:
+            name:"adduser_screen"
+            id:adduser_screen
