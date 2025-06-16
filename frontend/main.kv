@@ -1,6 +1,7 @@
 #:include screens/loginscreen.kv
 #:include screens/dashboard.kv
 #:include screens/adduser.kv
+#:include screens/listUsers.kv
 GridLayout:
     cols:1
     ScreenManager:
@@ -14,3 +15,6 @@ GridLayout:
         AddUserScreen:
             name:"adduser_screen"
             id:adduser_screen
+        ListUserScreen:
+            name:"list_users_screen"
+            id:list_users_screen

@@ -1,141 +1,189 @@
 <AddUserScreen>:
     BoxLayout:
         orientation: 'vertical'
-        padding: 10
-        spacing: 10
+        padding: 0
+        spacing: 0
 
-        # Background
-        canvas.before:
-            Color:
-                rgba: 0.94, 0.97, 1, 1
-            Rectangle:
-                pos: self.pos
-                size: self.size
-
-        # Titre principal
-        Label:
-            text: "🛠️ [b]Gestion des Utilisateurs[/b]"
-            font_size: 28
-            font_name: "EmojiFont"
-            color: 0.1, 0.2, 0.4, 1
-            markup: True
+        # Topbar
+        BoxLayout:
             size_hint_y: None
             height: '50dp'
+            padding: 10
+            canvas:
+                Color:
+                    rgba: 0.2, 0.4, 0.6, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
 
-        # ScrollView pour permettre le défilement
-        ScrollView:
-            do_scroll_x: False
+            Label:
+                text: "[b]Gestion des Utilisateurs[/b]"
+                markup: True
+                font_size: 20
+                color: 1, 1, 1, 1
+
+        # Zone principale avec sidebar et contenu
+        BoxLayout:
+            orientation: 'horizontal'
             size_hint_y: 1
 
+            # Sidebar (exemple)
             BoxLayout:
                 orientation: 'vertical'
-                size_hint_y: None
-                height: self.minimum_height
-                spacing: 20
+                size_hint_x: None
+                width: '200dp'
                 padding: 10
+                spacing: 10
+                canvas:
+                    Color:
+                        rgba: 0.1, 0.2, 0.3, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
 
-                # section Ouvrier
+                Label:
+                    text: "[b]Menu[/b]"
+                    markup: True
+                    size_hint_y: None
+                    height: '40dp'
+                    color: 1, 1, 1, 1
+
+                # Ajoute d'autres éléments dans la sidebar
+                Button:
+                    text: "Ajouter des utilisateurs"
+                Button:
+                    text: "liste des utilisateurs"
+                    on_release: root.root_to_listUsers()
+                Button:
+                    text: "Paramètres"
+
+            # Zone de contenu principale
+            ScrollView:
+                do_scroll_x: False
+                size_hint_y: 1
+
                 BoxLayout:
                     orientation: 'vertical'
                     size_hint_y: None
                     height: self.minimum_height
-                    spacing: 8
+                    spacing: 20
+                    padding: 10
 
-                    Label:
-                        text: "👷‍♂️ Ajouter un Ouvrier"
-                        font_size: 22
-                        font_name: "EmojiFont"
-                        color: 0.2, 0.3, 0.6, 1
+                    # section Ouvrier
+                    BoxLayout:
+                        orientation: 'vertical'
                         size_hint_y: None
-                        height: '40dp'
+                        height: self.minimum_height
+                        spacing: 8
 
-                    TextInput:
-                        id: nom_ouvrier
-                        hint_text: "Nom 👤"
-                        font_name: "EmojiFont"
-                        multiline: False
+                        Label:
+                            text: "👷‍♂️ Ajouter un Ouvrier"
+                            font_size: 30
+                            font_name: "EmojiFont"
+                            color: 0.2, 0.3, 0.6, 1
+                            size_hint_y: None
+                            height: '40dp'
+
+                        TextInput:
+                            id: nom_ouvrier
+                            hint_text: "Nom 👤"
+                            font_name: "EmojiFont"
+                            multiline: False
+                            size_hint_y: None
+                            height: '40dp'
+                            width:'200dp'
+
+                        TextInput:
+                            id: prenom_ouvrier
+                            hint_text: "Prénom 🧾"
+                            font_name: "EmojiFont"
+                            multiline: False
+                            size_hint_y: None
+                            height: '40dp'
+
+                        TextInput:
+                            id: matricule_ouvrier
+                            hint_text: "Matricule 🆔"
+                            font_name: "EmojiFont"
+                            multiline: False
+                            size_hint_y: None
+                            height: '40dp'
+
+                        Button:
+                            text: "✅ Ajouter Ouvrier"
+                            font_name: "EmojiFont"
+                            background_color: 0, 0.7, 0.6, 1
+                            size_hint_y: None
+                            height: '50dp'
+                            on_release: root.ajouter_ouvrier()
+
+                    # section Utilisateur
+                    BoxLayout:
+                        orientation: 'vertical'
                         size_hint_y: None
-                        height: '40dp'
+                        height: self.minimum_height
+                        spacing: 8
 
-                    TextInput:
-                        id: prenom_ouvrier
-                        hint_text: "Prénom 🧾"
-                        font_name: "EmojiFont"
-                        multiline: False
-                        size_hint_y: None
-                        height: '40dp'
+                        Label:
+                            text: "👨‍💼 Ajouter un Utilisateur de l'application"
+                            font_size: 22
+                            font_name: "EmojiFont"
+                            color: 0.2, 0.3, 0.6, 1
+                            size_hint_y: None
+                            height: '40dp'
 
-                    TextInput:
-                        id: matricule_ouvrier
-                        hint_text: "Matricule 🆔"
-                        font_name: "EmojiFont"
-                        multiline: False
-                        size_hint_y: None
-                        height: '40dp'
+                        TextInput:
+                            id: nom_utilisateur
+                            hint_text: "Nom 👤"
+                            font_name: "EmojiFont"
+                            multiline: False
+                            size_hint_y: None
+                            height: '40dp'
 
-                    Button:
-                        text: "✅ Ajouter Ouvrier"
-                        font_name: "EmojiFont"
-                        background_color: 0, 0.7, 0.6, 1
-                        size_hint_y: None
-                        height: '50dp'
-                        on_release: root.ajouter_ouvrier()
+                        Label:
+                            id: username_error
+                            text: ""
+                            font_size: 18
+                            color: 1, 0, 0, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                        TextInput:
+                            id: motdepasse_utilisateur
+                            hint_text: "Mot de passe 🔐"
+                            font_name: "EmojiFont"
+                            password: True
+                            multiline: False
+                            size_hint_y: None
+                            height: '40dp'
+                        Label:
+                            id: password_error
+                            text: ""
+                            font_size: 18
+                            color: 1, 0, 0, 1
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                        Spinner:
+                            id: role_utilisateur
+                            text: "Sélectionner un rôle"
+                            values: ["production", "coupe","piqure1","picure2","piqure3","montage","control"]
+                            font_name: "EmojiFont"
+                            size_hint_y: None
+                            height: '40dp'
+                            on_text: print(f"Rôle sélectionné : {self.text}")
+                        Label:
+                            id: message
+                            text: ""
+                            font_name: "EmojiFont"
+                            color: 1, 0, 0, 1
+                            font_size: 18
+                            bold: True
+                            size_hint_y: None
+                            height: self.texture_size[1]
+                        Button:
+                            text: "➕ Ajouter Utilisateur"
+                            font_name: "EmojiFont"
+                            background_color: 0.3, 0.6, 0.8, 1
+                            size_hint_y: None
+                            height: '50dp'
+                            on_release: root.ajouter_utilisateur()
 
-                # section Utilisateur
-                BoxLayout:
-                    orientation: 'vertical'
-                    size_hint_y: None
-                    height: self.minimum_height
-                    spacing: 8
-
-                    Label:
-                        text: "👨‍💼 Ajouter un Utilisateur de l'application"
-                        font_size: 22
-                        font_name: "EmojiFont"
-                        color: 0.2, 0.3, 0.6, 1
-                        size_hint_y: None
-                        height: '40dp'
-
-                    TextInput:
-                        id: nom_utilisateur
-                        hint_text: "Nom 👤"
-                        font_name: "EmojiFont"
-                        multiline: False
-                        size_hint_y: None
-                        height: '40dp'
-
-                    TextInput:
-                        id: motdepasse_utilisateur
-                        hint_text: "Mot de passe 🔐"
-                        font_name: "EmojiFont"
-                        password: True
-                        multiline: False
-                        size_hint_y: None
-                        height: '40dp'
-
-                    Spinner:
-                        id: role_utilisateur
-                        text: "👑 Sélectionner un rôle"
-                        values: ["Admin 👑", "Manager 📋", "Technicien 🛠️"]
-                        font_name: "EmojiFont"
-                        size_hint_y: None
-                        height: '40dp'
-
-                    Button:
-                        text: "➕ Ajouter Utilisateur"
-                        font_name: "EmojiFont"
-                        background_color: 0.3, 0.6, 0.8, 1
-                        size_hint_y: None
-                        height: '50dp'
-                        on_release: root.ajouter_utilisateur()
-
-        # Message
-        Label:
-            id: message
-            text: ""
-            font_name: "EmojiFont"
-            color: 0.1, 0.5, 0.2, 1
-            font_size: 16
-            bold: True
-            size_hint_y: None
-            height: '40dp'

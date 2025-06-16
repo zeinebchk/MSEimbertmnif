@@ -47,6 +47,8 @@ class User(db.Model):
     def delete_user(self):
         db.session.delete(self)
         db.session.commit()
+
+    @classmethod
     def get_all_users(self):
         return User.query.all()
 

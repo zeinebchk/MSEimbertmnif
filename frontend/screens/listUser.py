@@ -1,26 +1,16 @@
-import requests
-from kivy.uix.boxlayout import BoxLayout
-from kivy.uix.button import Button
-from kivy.uix.label import Label
-from kivy.uix.popup import Popup
-from kivy.graphics import Color, Rectangle
-from kivy.utils import get_color_from_hex
-# from kivymd.uix.screen import MDScreen
-# from kivymd.uix.textfield import MDTextField
-# from kivymd.uix.button import MDRectangleFlatButton
-from kivy.metrics import dp
-from kivy.lang import Builder
 from kivy.uix.screenmanager import Screen
 
 from frontend.SessionManager import SessionManager
-from utils.components import username_input,password_input
-class LoginScreen(Screen):
 
+
+class ListUserScreen(Screen):
     def __init__(self, **kwargs):
         session = SessionManager.get_instance()
         super().__init__(**kwargs)
+        self.loadUsers();
+    def loadUsers(self):
 
-    def on_login(self):
+    def chercher(self):
         session = SessionManager.get_instance()
         login_value = self.ids.login.text
         password_value = self.ids.password.text
@@ -35,7 +25,7 @@ class LoginScreen(Screen):
             self.ids.password_error.text = "Veuillez entrer votre mot de passe"
         else:
             self.ids.password_error.text = ""
-        if login_value!="" and password_value!="":
+        if login_value != "" and password_value != "":
             url = "http://127.0.0.1:5000/auth/login"  # modifie l'URL selon ton serveur
 
             # Préparer les données à envoyer
@@ -47,22 +37,21 @@ class LoginScreen(Screen):
             try:
                 response = requests.post(url, json=data)
 
-                print("ffffff",response.json())
+                print("ffffff", response.json())
 
                 print(data)
                 if response.status_code == 200:
                     data = response.json()[0]
-                    session.set_tokens(data.get("access_token"),data.get("refresh_token"))
+                    session.set_tokens(data.get("access_token"), data.get("refresh_token"))
 
-
-                    if data.get("role")=="production":
+                    if data.get("role") == "production":
                         self.manager.current = "dashboard_screen"
-                    elif data.get("role")=="userManager":
-                        self.manager.current = "list_users_screen"
+                    elif data.get("role") == "userManager":
+                        self.manager.current = "adduser_screen"
                     elif data.get("role") == "Technicien picure2 🛠":
                         self.manager.current = "adduser_screen"
                 else:
-                    self.show_popup("Erreur de connexion","login ou mot de passe est incorrect")
+                    self.show_popup("Erreur de connexion", "login ou mot de passe est incorrect")
                     print("Échec de la connexion :", response.json().get("message"))
             except requests.exceptions.RequestException as e:
                 self.show_popup("Erreur de connexion", "login ou mot de passe est incorrect")
@@ -115,3 +104,5 @@ class LoginScreen(Screen):
 
         popup.content = content
         popup.open()
+    def root_to_addUser(self):
+        self.manager.current = "adduser_screen"

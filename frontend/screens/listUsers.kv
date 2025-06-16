@@ -1,0 +1,156 @@
+<ListUserScreen>:
+    BoxLayout:
+        orientation: 'vertical'
+
+        # Topbar
+        BoxLayout:
+            size_hint_y: None
+            height: '50dp'
+            padding: 10
+            canvas:
+                Color:
+                    rgba: 0.2, 0.4, 0.6, 1
+                Rectangle:
+                    pos: self.pos
+                    size: self.size
+
+            Label:
+                text: "[b]Gestion des Utilisateurs[/b]"
+                markup: True
+                font_size: 20
+                color: 1, 1, 1, 1
+
+        # Zone principale avec Sidebar et contenu
+        BoxLayout:
+            orientation: 'horizontal'
+
+            # Sidebar
+            BoxLayout:
+                orientation: 'vertical'
+                size_hint_x: None
+                width: '200dp'
+                padding: 10
+                spacing: 10
+                canvas:
+                    Color:
+                        rgba: 0.1, 0.2, 0.3, 1
+                    Rectangle:
+                        pos: self.pos
+                        size: self.size
+
+                Label:
+                    text: "[b]Menu[/b]"
+                    markup: True
+                    size_hint_y: None
+                    height: '40dp'
+                    color: 1, 1, 1, 1
+
+                Button:
+                    text: "Ajouter utilisateur"
+                    on_release:root.root_to_addUser()
+                Button:
+                    text: "Utilisateurs"
+                Button:
+                    text: "Paramètres"
+
+            # Contenu principal
+            BoxLayout:
+                orientation: 'vertical'
+
+                # Optionnel : une Topbar dans la zone principale si besoin
+                # Si tu préfères une topbar distincte, tu peux la mettre ici
+
+                # Contenu de la page (listes + autres)
+                # --- Tes sections existantes ----
+                Label:
+                    text: "Liste des Utilisateurs"
+                    font_size: 20
+                    bold: True
+                    size_hint_y: None
+                    height: '40dp'
+
+                ScrollView:
+                    id: table_scroll
+                    do_scroll_x: True
+                    do_scroll_y: True
+                    bar_width: dp(10)
+
+                    GridLayout:
+                        id: table_grid
+                        size_hint_y: None
+                        height: self.minimum_height
+                        size_hint_x: None
+                        width: self.minimum_width
+                        spacing: dp(1)
+                        padding: dp(1)
+                        cols: 1
+
+                # Barre de recherche + boutons
+                BoxLayout:
+                    size_hint_y: None
+                    height: '50dp'
+                    spacing: 10
+
+                    TextInput:
+                        id: search_input
+                        hint_text: "Rechercher par ID ou Username"
+                        multiline: False
+
+                    Button:
+                        text: "Rechercher"
+
+                    Button:
+                        text: "Modifier"
+
+                    Button:
+                        text: "Supprimer"
+
+                # Zone pour modifier utilisateur
+                BoxLayout:
+                    orientation: 'vertical'
+                    size_hint_y: None
+                    height: '200dp'
+                    padding: 10
+                    spacing: 10
+                    canvas:
+                        Color:
+                            rgba: 0.9, 0.9, 0.9, 1
+                        Rectangle:
+                            pos: self.pos
+                            size: self.size
+
+                    Label:
+                        text: "Modifier Utilisateur"
+                        font_size: 18
+                        bold: True
+                        size_hint_y: None
+                        height: '30dp'
+
+                    BoxLayout:
+                        spacing: 10
+                        size_hint_y: None
+                        height: '40dp'
+                        Label:
+                            text: "Username:"
+                            size_hint_x: 0.3
+                        TextInput:
+                            id: mod_username
+                            multiline: False
+
+                    BoxLayout:
+                        spacing: 10
+                        size_hint_y: None
+                        height: '40dp'
+                        Label:
+                            text: "Rôle:"
+                            size_hint_x: 0.3
+                        Spinner:
+                            id: mod_role
+                            values: ["production", "coupe", "piqure1", "piqure2", "piqure3", "montage", "control"]
+                            size_hint_x: 0.7
+
+                    Button:
+                        text: "Valider Modification"
+                        size_hint_y: None
+                        height: '40dp'
+                        background_color: 0.2, 0.6, 0.8, 1
