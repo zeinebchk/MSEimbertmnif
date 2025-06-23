@@ -51,16 +51,20 @@ class LoginScreen(Screen):
 
                 print(data)
                 if response.status_code == 200:
+                    print("logged innnnnnnnnnnnn")
+                    self.ids.login.text=""
+                    self.ids.password.text=""
                     data = response.json()[0]
                     session.set_tokens(data.get("access_token"),data.get("refresh_token"))
-
-
                     if data.get("role")=="production":
                         self.manager.current = "dashboard_screen"
                     elif data.get("role")=="userManager":
                         self.manager.current = "list_users_screen"
                     elif data.get("role") == "Technicien picure2 🛠":
                         self.manager.current = "adduser_screen"
+                elif response.status_code == 401:
+                    self.show_popup("Erreur de connexion",response.json().get("message"))
+
                 else:
                     self.show_popup("Erreur de connexion","login ou mot de passe est incorrect")
                     print("Échec de la connexion :", response.json().get("message"))
@@ -115,3 +119,8 @@ class LoginScreen(Screen):
 
         popup.content = content
         popup.open()
+
+    def logout(self):
+        session = SessionManager().get_instance()
+        session.set_tokens(None, None)
+        self.root.current = "login_screen"

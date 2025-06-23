@@ -12,20 +12,41 @@ from frontend.Client import make_request
 from frontend.SessionManager import SessionManager
 
 
-class ListUserScreen(Screen):
+class GestionRoleScreen(Screen):
     show_modification = BooleanProperty(False)
     def __init__(self, **kwargs):
         session = SessionManager.get_instance()
         super().__init__(**kwargs)
-        self.users=[]
-    def on_enter(self):
-        self.show_modification=False
-        self.loadUsers()
+        self.roles=[]
 
-    def display_users(self,users):
-        print(users)
+    def addRole(self):
+        role = self.ids.input_role.text.strip()
+        print(role)
+        if not role:
+            self.show_popup("attention","veuillez introduire un nom de role valide")
+        try:
+            data = {
+               "id":role
+            }
+            response = make_request("post", "/manage_chaine_roles/addchaineOrRole", json=data)
+
+            if response.json()[1] == 200:
+
+                self.show_popup("Succées", "✅ role ajouté avec succès !")
+                self.loadRoles()
+            elif response.json()[1] == 409:
+                self.show_popup("Attention ", " role existe deja !")
+        except Exception as e:
+            self.show_popup("Erreur", f"Erreur lors de l'ajout : {str(e)}")
+            print(f"❌ Exception levée : {str(e)}")
+
+    def on_enter(self):
+        self.loadRoles()
+
+    def display_roles(self,roles):
+
         self.ids.table_grid.clear_widgets()
-        headers = ["ID", "Nom d'utilisateur", "Rôle","Autorisation"]
+        headers = ["ID"]
         for header in headers:
             self.ids.table_grid.add_widget(Label(
                 text=header,
@@ -34,87 +55,38 @@ class ListUserScreen(Screen):
                 size_hint_y=None,
                 height=dp(35)
             ))
-        for user in users:
+        for role in roles:
             self.ids.table_grid.add_widget(
-                Label(text=str(user["id"]), size_hint_y=None, height=dp(30), color=(0, 0, 0, 1)))
-            self.ids.table_grid.add_widget(
-                Label(text=user["username"], size_hint_y=None, height=dp(30), color=(0, 0, 0, 1)))
-            self.ids.table_grid.add_widget(
-                Label(text=user["role"], size_hint_y=None, height=dp(30), color=(0, 0, 0, 1)))
-            if user["authorized"]==1:
-                self.ids.table_grid.add_widget(
-                Label(text="autorise", size_hint_y=None, height=dp(30), color=(0, 0, 0, 1)))
-            else:
-                self.ids.table_grid.add_widget(
-                    Label(text="non autorise", size_hint_y=None, height=dp(30), color=(0, 0, 0, 1)))
-
-    def loadUsers(self):
-        print("loadUsers")
-        response = make_request("get", "/manage_users/getUsers")
+                Label(text=str(role["id"]), size_hint_y=None, height=dp(30), color=(0, 0, 0, 1)))
+    def loadRoles(self):
+        response = make_request("get", "/manage_chaine_roles/getAllRoles")
         if response.status_code == 200:
             print(response.json())
-            data=response.json()[0].get("users")
-            self.users=data
+            data=response.json()[0].get("roles")
+            self.roles=data
             print(data)
-            self.display_users(self.users)
+            self.display_roles(self.roles)
         else:
             print("Erreur lors du chargement des utilisateurs :", response)
 
-    # def changeAuthorization(self):
-    #     id = self.ids.input_user.text
-    #     if id !="":
-    #         self.show_modification=False
-    #
-    #         self.ids.input_user.text = ""
-    #         self.ids.mod_username.text = ""
-    #         self.ids.mod_role.text = ""
-    #         self.ids.new_password.text = ""
-    #
-    #         data={"id":id}
-    #         response=make_request("get","/manage_users/getUserById",json=data)
-    #         if response.json()[1] == 200:
-    #             data=response.json()[0].get("authorization")
-    #             if data ==1:
-    #                 self.ids.mod_authorization.text="autorisé"
-    #             else:
-    #                 self.ids.mod_authorization.text="non autorisé"
-    #     else:
-    #         self.show_popup("Attention !","veuillez saisir un id valide")
-    #     #     self.loadUsers()
-    #     #     return
-    #     # elif response.json()[1] == 401:
-    #     #     self.show_popup("Attention","Vous n'etes pas autorisé pour faire cette fonction")
-    #     #     return
-    #     # elif response.json()[1] == 404:
-    #     #     self.show_popup("Attention", "utilisateur n'existe pas dans la base")
-    #     #     return
-    #     # return
-
 
     def updateUser(self):
-        print("updateUser")
         id=self.ids.input_user.text
         username=self.ids.mod_username.text
         role=self.ids.mod_role.text
-        password = self.ids.new_password.text
-        if self.ids.mod_authorization.text=="autorise":
-            authorized=1
-        else:
-            authorized=0
-        if password == "":
-            data = {
-                "id": id,
-                "username": username,
-                "role": role,
-                "authorized":authorized}
+        password=self.ids.new_password.text
+        if password=="":
+            data={
+                "id":id,
+                "username":username,
+                "role":role}
         else:
             data = {
                 "id": id,
                 "username": username,
                 "role": role,
-                "pwd": password,
-                "authorized":authorized}
-        print(data)
+                "pwd": password}
+
         response=make_request("put","/manage_users/updateUser",json=data)
         if response.json()[1] == 201:
             self.show_popup("Succées","utilisateur modifié avec succées")
@@ -131,46 +103,33 @@ class ListUserScreen(Screen):
             return
 
 
-
-
     def afficher_detail_user(self):
-        id = self.ids.input_user.text
-        if id !="":
-            self.show_modification = True
-            id=self.ids.input_user.text
+        id=self.ids.input_role.text
+        if id!="":
+            self.show_modification=True
             data={"id":id}
-            response=make_request("get","/manage_users/getUserById",json=data)
+            response=make_request("get","/",json=data)
             print(response)
             if response.json()[1] == 200:
-
                 data=response.json()[0].get("user")
                 self.ids.mod_username.text=data.get("username")
                 self.ids.mod_role.text=data.get("role")
-                if data.get("authorized") == 1:
-                    self.ids.mod_authorization.text = "autorise"
-                else:
-                    self.ids.mod_authorization.text = "non autorise"
             elif response.json()[1] == 401:
                 self.show_popup("Attention","Vous n'etes pas autorisé pour faire cette fonction")
                 return
             elif response.json()[1] == 404:
                 self.show_popup("Attention", "utilisateur n'existe pas dans la base")
                 return
-        else:
-            self.show_popup("Attention !","veuillez saisir un id valide")
-
-
 
     def chercher_par_nom(self):
         search_text=self.ids.search_input.text
         print(search_text)
-        if search_text !="":
-            for user in self.users:
-                if user["username"] == search_text:
-                    self.users = [user]
+        for user in self.users:
+            if user["username"] == search_text:
+                self.users = [user]
 
-                    self.display_users(self.users)
-            print("chercher par nom",self.users)
+                self.display_users(self.users)
+        print("chercher par nom",self.users)
 
     def show_popup(self, title, message):
         popup = Popup(
@@ -219,6 +178,5 @@ class ListUserScreen(Screen):
 
         popup.content = content
         popup.open()
-    def updateAuthorization(self):
-        authorization=self.ids.authorization.text
-
+    def root_to_addUser(self):
+        self.manager.current = "adduser_screen"

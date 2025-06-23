@@ -11,9 +11,10 @@ def make_request(method,endpoint,**kwargs):
 
     try:
         print("access_token", session.get_access_token())
+        print(BASE_URL+endpoint)
         response=requests.request(method,BASE_URL+endpoint,headers=headers,**kwargs)
-        print("make request",response)
-        if response.status_code ==401:
+        print("make request",response.json())
+        if response.json()[1] == 401:
             res=refrech_token()
             if res:
                 print("refresh make request")
@@ -35,11 +36,10 @@ def refrech_token():
     headers = {
         "Authorization": f"Bearer {refresh_token}"
     }
-    response=requests.post(url,headers=headers)
-    if response.status_code == 200:
-        data=response.json()
-        print(data)
-        session.set_tokens(data.get("access_token"),refresh_token)
+    response=requests.get(url,headers=headers)
+    if response.json()[1] == 200:
+        access_token=response.json()[0].get("access_token")
+        session.set_tokens(access_token,refresh_token)
         return True
     return False
 

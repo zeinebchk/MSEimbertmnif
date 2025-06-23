@@ -1,6 +1,7 @@
 import numpy as np
 from kivy.app import App
 from kivy.lang import Builder
+from kivy.uix.checkbox import CheckBox
 from kivy.uix.screenmanager import Screen
 from kivy.properties import ObjectProperty, BooleanProperty
 from kivy.metrics import dp
@@ -13,7 +14,7 @@ from kivy.graphics import Color, Line
 import pandas as pd
 import os
 
-
+from frontend.Client import make_request
 
 
 class DashboardScreen(Screen):
@@ -30,6 +31,7 @@ class DashboardScreen(Screen):
         self.df = pd.DataFrame()
         self.checks = []
         self.checksChainePicure=[]
+
     def on_parent(self, *args):
         # Synchronize horizontal scrolling between header_scroll and table_scroll
         if hasattr(self, 'table_scroll') and hasattr(self, 'header_scroll'):
@@ -211,6 +213,41 @@ class DashboardScreen(Screen):
         content.add_widget(btn)
         popup.content = content
         popup.open()
+
+    def on_enter(self):
+        grid_checkbox=self.ids.type_chaine
+        grid_checkbox.clear_widgets()
+        roles=self.loadType_chaine()
+        for role in roles:
+            label = Label(
+                text=role,
+                font_size=22,
+                bold=True,
+                color=(0.1, 0.1, 0.1, 1),
+            )
+            checkbox = CheckBox(
+                size_hint_x=0.3,
+                color=(0.49, 0.48, 0.49, 1),
+                background_checkbox_normal='',
+                background_checkbox_down='check.png'
+            )
+            checkbox.bind(active=lambda cb, val, role_name=role: self.checkbox_typeChaine(cb, val, role_name))
+            grid_checkbox.add_widget(label)
+            grid_checkbox.add_widget(checkbox)
+    def loadType_chaine(self):
+        values = []
+        print("loadUsers")
+        response = make_request("get", "/manage_chaine_roles/getAllRoles")
+        if response.status_code == 200:
+            print(response.json())
+            data = response.json()[0].get("roles")
+            for role in data:
+                values.append(role["id"])
+            print("roles", values)
+            return values
+        else:
+            print("Erreur lors du chargement des utilisateurs :", response)
+
     def checkbox_typeChaine(self, instance,value,topping):
         print(value)
         if value:
@@ -220,11 +257,4 @@ class DashboardScreen(Screen):
             if topping in self.checks:
                 self.checks.remove(topping)
         print(f"Current checks: {self.checks}")
-    # def check_chainePicure(self, instance,value,topping):
-    #     if value:
-    #         if topping not in self.checksChainePicure:
-    #             self.checksChainePicure.append(topping)
-    #     else:
-    #         if topping in self.checksChainePicure:
-    #             self.checksChainePicure.remove(topping)
-    #     print(f"Current checks: {self.checks}")
+

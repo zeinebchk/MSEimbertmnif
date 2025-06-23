@@ -6,6 +6,8 @@ from screens.listUser import ListUserScreen
 from screens.login import LoginScreen
 from screens.dashboard import DashboardScreen
 from screens.addUser import AddUserScreen
+from screens.gestionRole import GestionRoleScreen
+from frontend.SessionManager import SessionManager
 emoji_font_path = r"D:\seguiemj.ttf"
 LabelBase.register(name='EmojiFont', fn_regular=emoji_font_path)
 Window.size = (800, 600)
@@ -15,6 +17,20 @@ class MyApp(App):
     def build(self):
         return GUI
 
+    def logout(self):
+        print("loggggg outt")
+        session=SessionManager().get_instance()
+        session.set_tokens(None,None)
+        print(session.get_access_token())
+        print(session.get_refresh_token())
+        self.root.current = "login_screen"
+    def root_to_listUsers(self):
+        self.root.current = "list_users_screen"
+
+    def root_to_addUser(self):
+        self.root.current = "adduser_screen"
+    def root_to_gestionRole(self):
+        self.root.current = "gestion_role_screen"
 
 if __name__ == '__main__':
     MyApp().run()

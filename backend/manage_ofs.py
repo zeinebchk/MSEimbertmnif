@@ -1,12 +1,12 @@
 from flask import Blueprint,jsonify,request
 from models import User
-from schemas import UserSchema
+from schemas import  OFSSchema
 from flask_jwt_extended import jwt_required, get_jwt, current_user
+from models import OFS
+manage_ofs_bp=Blueprint('manage_ofs', __name__)
 
-manageusers_bp=Blueprint('manage_users', __name__)
 
-
-@manageusers_bp.post("/addUser")
+@manage_ofs_bp.post("/addOfs")
 @jwt_required()
 def addUser():
     if current_user.role == "userManager":
@@ -25,19 +25,33 @@ def addUser():
             new_user.save_user()
             return jsonify({"message": "User added successfully"},200)
     return jsonify({"message": "Vous n'etes pas autorisé pour cette focntion"},401)
-@manageusers_bp.get("/getUsers")
+@manage_ofs_bp.get("/getAllLatestOfs")
 @jwt_required()
-def getUsers():
-    if current_user.role == "userManager":
-        users=User.get_all_users()
-        users_result = UserSchema().dump(users, many=True)
+def getAllLatestOfs():
+    if current_user.role == "production":
+        ofs=OFS.get_all_latest_ofs()
+        ofs_result = OFSSchema().dump(ofs, many=True)
         return jsonify({
-            "users":users_result,
+            "users":ofs_result,
             },200)
     return jsonify({
        "message":"unauthorized"
-    }),401
-@manageusers_bp.delete("/deleteUser")
+    },401)
+@manage_ofs_bp.get("/getOfsBydate")
+@jwt_required()
+def getOfsBydate():
+    if current_user.role == "production":
+        data = request.get_json()
+        date = data.get("lancementDate")
+        ofs=OFS.get_ofs_by_lancementDate(date)
+        ofs_result = OFSSchema().dump(ofs, many=True)
+        return jsonify({
+            "users":ofs_result,
+            },200)
+    return jsonify({
+       "message":"unauthorized"
+    },401)
+@manage_ofs_bp.delete("/deleteUser")
 @jwt_required()
 def deleteUser():
     if current_user.role == "userManager":
@@ -52,7 +66,7 @@ def deleteUser():
         return jsonify({
             "message":"user doesn't exist"
         },404)
-@manageusers_bp.put("/updateUser")
+@manage_ofs_bp.put("/updateUser")
 @jwt_required()
 def updateUser():
     if current_user.role == "userManager":
@@ -69,7 +83,7 @@ def updateUser():
         },404)
 
 
-@manageusers_bp.get("/getUserById")
+@manage_ofs_bp.get("/getUserById")
 @jwt_required()
 def getUserById():
     if current_user.role == "userManager":
@@ -84,7 +98,7 @@ def getUserById():
             "message": "user n'existe pas dans la base"
         },404)
 
-@manageusers_bp.put("/updateAuthorization")
+@manage_ofs_bp.put("/updateAuthorization")
 @jwt_required()
 def updateAuthorization():
     if current_user.role == "userManager":

@@ -2,19 +2,23 @@
 #:include screens/dashboard.kv
 #:include screens/adduser.kv
 #:include screens/listUsers.kv
-GridLayout:
-    cols:1
-    ScreenManager:
-        id:screen_manager
-        LoginScreen:
-            name:"login_screen"
-            id:login_screen
-        DashboardScreen:
-            name:"dashboard_screen"
-            id:dashboard_screen
-        AddUserScreen:
-            name:"adduser_screen"
-            id:adduser_screen
-        ListUserScreen:
-            name:"list_users_screen"
-            id:list_users_screen
+#:include screens/gestionRolesScreen.kv
+
+ScreenManager:
+    id:screen_manager
+    LoginScreen:
+        name:"login_screen"
+        id:login_screen
+    DashboardScreen:
+        name:"dashboard_screen"
+        id:dashboard_screen
+    AddUserScreen:
+        name:"adduser_screen"
+        id:adduser_screen
+    ListUserScreen:
+        name:"list_users_screen"
+        id:list_users_screen
+    GestionRoleScreen:
+        name:"gestion_role_screen"
+        id:gestion_role_screen
+

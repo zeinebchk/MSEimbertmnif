@@ -17,6 +17,22 @@ Window.size = (600, 750)
 
 class AddUserScreen(Screen):
 
+    def on_enter(self):
+        roles=self.loadRoles()
+        self.ids.role_utilisateur.values=roles
+    def loadRoles(self):
+        values=["production","gestion des utilisateurs","control"]
+        print("loadUsers")
+        response = make_request("get", "/manage_chaine_roles/getAllRoles")
+        if response.status_code == 200:
+            print(response.json())
+            data = response.json()[0].get("roles")
+            for role in data:
+                values.append(role["id"])
+            print("roles",values)
+            return values
+        else:
+            print("Erreur lors du chargement des utilisateurs :", response)
     def ajouter_ouvrier(self):
         nom = self.ids.nom_ouvrier.text.strip()
         prenom = self.ids.prenom_ouvrier.text.strip()
@@ -56,21 +72,21 @@ class AddUserScreen(Screen):
                 data={
                     "username":username,
                     "password":password,
-                    "role":role
+                    "role":role,
+                    "authorized":1,
                 }
                 response=make_request("post","/manage_users/addUser",json=data)
 
-                if response.status_code == 200:
+                if response.json()[1] == 200:
                     self.ids.message.text = "✅ Utilisateur ajouté avec succès !"
                     self.ids.nom_utilisateur.text = ""
                     self.ids.motdepasse_utilisateur.text = ""
                     self.show_popup("Succées","✅ Utilisateur ajouté avec succès !")
-                elif response.status_code == 409:
+                elif response.json()[1] == 409:
                     self.show_popup("Attention "," Utilisateur existe deja !")
             except Exception as e:
-                self.show_popup("Attention ", " Utilisateur existe deja !")
-                self.ids.message.text = "✅ Utilisateur exite déja dans la base !"
-                print( f"❌ Erreur : {str(e)}")
+                self.show_popup("Erreur", f"Erreur lors de l'ajout : {str(e)}")
+                print(f"❌ Exception levée : {str(e)}")
 
     def show_popup(self, title, message):
         popup = Popup(

@@ -1,3 +1,4 @@
+from datetime import timedelta
 
 from flask import Blueprint, jsonify,request
 from models import User
@@ -11,17 +12,17 @@ def login_user():
     user= User.get_user_by_username(username=data.get('username'))
     print(user.check_password(data.get('password')))
     if user is None:
-
         return jsonify({"message": "invalid username or password"}), 400
     if not user.check_password(data.get('password')):
-
         return jsonify({"message": "invalid username or password"}), 400
+    if user.authorized == 0:
+        return jsonify({"message": "Vous n'etes pas autorisé à acceder a l'application "}),401,
     additional_claims={
         "id":user.id,
         "username":user.username,
         "role":user.role
     }
-    access_token = create_access_token(identity=user.role,additional_claims=additional_claims)
+    access_token = create_access_token(identity=user.role,additional_claims=additional_claims,expires_delta=timedelta(minutes=2))
     refresh_token = create_refresh_token(identity=user.role,additional_claims=additional_claims)
     return jsonify(
         {
@@ -40,9 +41,9 @@ def refresh_token():
          "username": current_user.username,
          "role": current_user.role
      }
-     access_token = create_access_token(identity=identity, additional_claims=additional_claims)
+     access_token = create_access_token(identity=identity, additional_claims=additional_claims,expires_delta=timedelta(minutes=2))
      return jsonify(
          {
              "access_token":access_token
-         }
+         },200
      )

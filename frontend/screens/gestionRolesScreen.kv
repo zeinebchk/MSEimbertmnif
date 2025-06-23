@@ -1,4 +1,4 @@
-<ListUserScreen>:
+<GestionRoleScreen>:
     BoxLayout:
         orientation: 'vertical'
 
@@ -88,7 +88,7 @@
                             on_release: root.loadUsers()
 
                     Label:
-                        text: "Liste des Utilisateurs"
+                        text: "Liste des roles"
                         font_size: 20
                         bold: True
                         size_hint_y: None
@@ -105,22 +105,24 @@
 
                         GridLayout:
                             id: table_grid
-                            cols: 4
+                            cols: 1
                             size_hint_y: None
                             height: self.minimum_height
                             row_default_height: dp(40)
                             spacing: dp(5)
-
                     BoxLayout:
                         size_hint_y: None
                         height: '50dp'
                         spacing: 10
 
                         TextInput:
-                            id: input_user
+                            id: input_role
                             hint_text: "entrez l'id"
                             multiline: False
 
+                        Button:
+                            text: "ajouter"
+                            on_release: root.addRole()
                         Button:
                             text: "Modifier"
                             on_release: root.afficher_detail_user()
@@ -129,7 +131,7 @@
                     BoxLayout:
                         orientation: 'vertical'
                         size_hint_y: None
-                        height: '350dp'
+                        height: '200dp'
                         padding: 10
                         spacing: 20
                         opacity: 1 if root.show_modification else 0
@@ -141,7 +143,7 @@
                                 size: self.size
 
                         Label:
-                            text: "Modifier Utilisateur"
+                            text: "Modifier Role"
                             font_size: 22
                             bold: True
                             size_hint_y: None
@@ -153,55 +155,13 @@
                             size_hint_y: None
                             height: '40dp'
                             Label:
-                                text: "Username:"
+                                text: "nouvelle valeur:"
                                 size_hint_x: 0.3
                                 color: 0, 0, 0, 1
                             TextInput:
-                                id: mod_username
+                                id: mod_new_role
                                 multiline: False
                                 text: ""
-                        BoxLayout:
-                            spacing: 10
-                            size_hint_y: None
-                            height: '40dp'
-                            Label:
-                                text: "Nouveau mot de passe"
-                                size_hint_y: None
-                                height: '30dp'
-                                color: 0, 0, 0, 1
-
-                            TextInput:
-                                id: new_password
-                                multiline: False
-                                password: True
-                                hint_text: "Saisir le nouveau mot de passe"
-                                size_hint_y: None
-                                height: '40dp'
-
-                        BoxLayout:
-                            spacing: 10
-                            size_hint_y: None
-                            height: '40dp'
-                            Label:
-                                text: "Rôle:"
-                                size_hint_x: 0.3
-                                color: 0, 0, 0, 1
-                            Spinner:
-                                id: mod_role
-                                values: ["production", "coupe", "piqure1", "piqure2", "piqure3", "montage", "control"]
-                                size_hint_x: 0.7
-                        BoxLayout:
-                            spacing: 10
-                            size_hint_y: None
-                            height: '40dp'
-                            Label:
-                                text: "authorisation:"
-                                size_hint_x: 0.3
-                                color: 0, 0, 0, 1
-                            Spinner:
-                                id: mod_authorization
-                                values: ["autorise", "non autorise"]
-                                size_hint_x: 0.7
 
                         Button:
                             text: "Valider Modification"

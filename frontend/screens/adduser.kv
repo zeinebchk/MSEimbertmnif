@@ -50,12 +50,17 @@
 
                 # Ajoute d'autres éléments dans la sidebar
                 Button:
-                    text: "Ajouter des utilisateurs"
+                    text: "Ajouter utilisateur"
+                    on_release:app.root_to_addUser()
                 Button:
-                    text: "liste des utilisateurs"
-                    on_release: root.root_to_listUsers()
+                    text: "Utilisateurs"
+                    on_release:app.root_to_listUsers()
                 Button:
-                    text: "Paramètres"
+                    text: "Gestion du role"
+                    on_release:app.root_to_gestionRole()
+                Button:
+                    text: "déconnexion"
+                    on_release:app.logout()
 
             # Zone de contenu principale
             ScrollView:
