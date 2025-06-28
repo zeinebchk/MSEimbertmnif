@@ -34,15 +34,30 @@ class AddUserScreen(Screen):
         else:
             print("Erreur lors du chargement des utilisateurs :", response)
     def ajouter_ouvrier(self):
-        nom = self.ids.nom_ouvrier.text.strip()
-        prenom = self.ids.prenom_ouvrier.text.strip()
+        firstName = self.ids.nom_ouvrier.text.strip()
+        lastName = self.ids.prenom_ouvrier.text.strip()
         matricule = self.ids.matricule_ouvrier.text.strip()
-        if nom and prenom and matricule:
+        # if firstName == "" or lastName == "" or matricule == "":
+        #     self.show_popup("attention","veuiller remplir tous les champs")
+        #     return
+        if firstName and lastName and matricule:
             try:
-                self.ids.message.text = "✅ Ouvrier ajouté avec succès !"
-                self.ids.nom_ouvrier.text = ""
-                self.ids.prenom_ouvrier.text = ""
-                self.ids.matricule_ouvrier.text = ""
+                data = {
+                    "MATR": matricule,
+                    "NOM": firstName,
+                    "PRENOM": lastName,
+                }
+                response = make_request("post", "/manage_users/addWorker", json=data)
+
+                if response.json()[1] == 200:
+                    self.ids.message.text = "✅ Ouvrier ajouté avec succès !"
+                    self.ids.nom_ouvrier.text = ""
+                    self.ids.prenom_ouvrier.text = ""
+                    self.ids.matricule_ouvrier.text = ""
+                    self.show_popup("Succées", "✅ Utilisateur ajouté avec succès !")
+                elif response.json()[1] == 409:
+                    self.show_popup("Attention ", " Utilisateur existe deja !")
+
             except Exception as e:
                 self.ids.message.text = f"❌ Erreur : {str(e)}"
         else:

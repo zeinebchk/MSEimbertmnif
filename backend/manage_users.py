@@ -1,5 +1,6 @@
 from flask import Blueprint,jsonify,request
-from models import User
+
+from models import User,Ouvriers
 from schemas import UserSchema
 from flask_jwt_extended import jwt_required, get_jwt, current_user
 
@@ -101,3 +102,24 @@ def updateAuthorization():
         },404)
 
 
+
+
+
+@manageusers_bp.post("/addWorker")
+@jwt_required()
+def addOuvrier():
+    if current_user.role == "userManager":
+        data=request.get_json()
+        worker=Ouvriers.get_ouvrier_by_MATR(MATR=data.get("MATR"))
+        if worker is not None:
+            return jsonify({"error": "worker already exists"},409)
+        else:
+
+            new_worker=Ouvriers(
+                MATR=data.get("MATR"),
+                NOM=data.get("NOM"),
+                PRENOM=data.get("PRENOM"),)
+
+            new_worker.save_user()
+            return jsonify({"message": "worker added successfully"},200)
+    return jsonify({"message": "Vous n'etes pas autorisé pour cette focntion"},401)

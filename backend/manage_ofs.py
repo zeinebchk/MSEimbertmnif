@@ -1,38 +1,63 @@
 from flask import Blueprint,jsonify,request
-from models import User
-from schemas import  OFSSchema
+from schemas import OFSSchema, GetOfsForUpdate,GetOfsByModele
 from flask_jwt_extended import jwt_required, get_jwt, current_user
-from models import OFS
+from models import OFS,OFSChaine
 manage_ofs_bp=Blueprint('manage_ofs', __name__)
 
 
-@manage_ofs_bp.post("/addOfs")
+
+@manage_ofs_bp.post("/addOfs_chaines")
 @jwt_required()
-def addUser():
-    if current_user.role == "userManager":
+def addofschaine():
+    if current_user.role == "production":
         data=request.get_json()
-        user=User.get_user_by_username(username=data.get("username"))
-        if user is not None:
-            return jsonify({"error": "user already exists"},409)
-        else:
+        print(data)
 
-            new_user=User(
-                username=data.get("username"),
-                role=data.get("role"),
-                authorized=data.get("authorized"),)
-            new_user.generate_password(password=data.get("password"))
+        for of in data:
+            ofchaine=OFSChaine.get_ofs_chaine_by_numOF(of["numCommandeOF"],of["idchaine"])
+            print(ofchaine)
+            if ofchaine is None:
+                ofch=OFSChaine(
+                    idChaine=of["idchaine"],
+                    numCommandeOF=of["numCommandeOF"],
+                    dateLancement_of_chaine=None,
+                    dateFin = None,
+                    etat="enAttente"
+                )
+                ofch.save_chaine_of()
+                of=OFS.get_of_by_numOF(of["numCommandeOF"])
+                if of is not None:
+                    of.updateEtatAndDateLancement()
+            else:
+                return jsonify({"message": "les ofs existe déja"}, 409)
 
-            new_user.save_user()
-            return jsonify({"message": "User added successfully"},200)
-    return jsonify({"message": "Vous n'etes pas autorisé pour cette focntion"},401)
+        return jsonify({"message": "ofs_chaines added successfully"}, 200)
+    else:
+        return jsonify({"message": "Vous n'etes pas autorisé pour cette focntion"}, 401)
+
+    #     else:
+    #
+    #         new_user=User(
+    #             username=data.get("username"),
+    #             role=data.get("role"),
+    #             authorized=data.get("authorized"),)
+    #         new_user.generate_password(password=data.get("password"))
+    #
+    #         new_user.save_user()
+    #         return jsonify({"message": "User added successfully"},200)
+    # return jsonify({"message": "Vous n'etes pas autorisé pour cette focntion"},401)
+
+
+
+
 @manage_ofs_bp.get("/getAllLatestOfs")
 @jwt_required()
 def getAllLatestOfs():
     if current_user.role == "production":
-        ofs=OFS.get_all_latest_ofs()
-        ofs_result = OFSSchema().dump(ofs, many=True)
+        ofs=OFS.get_all_nonlance_ofs()
+        ofs_result = OFSSchema(many=True).dump(ofs)
         return jsonify({
-            "users":ofs_result,
+            "ofs":ofs_result,
             },200)
     return jsonify({
        "message":"unauthorized"
@@ -51,67 +76,77 @@ def getOfsBydate():
     return jsonify({
        "message":"unauthorized"
     },401)
-@manage_ofs_bp.delete("/deleteUser")
+
+@manage_ofs_bp.put("/update_of_chaine")
 @jwt_required()
-def deleteUser():
-    if current_user.role == "userManager":
+def update_of_chaine():
+    if current_user.role == "production":
         data=request.get_json()
-        id=data.get("id")
-        user=User.get_user_byId(id=id)
-        if user is not None:
-            user.delete_user()
-            return jsonify({
-            "message":"user deleted successfully"
-            },201)
-        return jsonify({
-            "message":"user doesn't exist"
-        },404)
-@manage_ofs_bp.put("/updateUser")
+        chaine_data=request.get_json().get('chaines')
+        of_chaines=request.get_json().get("ofs_chaines")
+        unique_ids = list(set(item["numCommandeOF"] for item in of_chaines))
+        print(data)
+
+        for numcmd in unique_ids:
+            for ch in chaine_data:
+                ofchaine=OFSChaine.get_ofs_chaine_by_numOF(numcmd,ch)
+                if ofchaine.etat=="enAttente":
+                    ofchaine.delete_of_chaine()
+
+        for of in of_chaines:
+            ofchaine = OFSChaine.get_ofs_chaine_by_numOF(of["numCommandeOF"],of["idchaine"])
+            if ofchaine is None:
+                ofch=OFSChaine(
+                idChaine=of["idchaine"],
+                numCommandeOF=of["numCommandeOF"],
+                dateLancement_of_chaine=None,
+                dateFin = None,
+                etat="enAttente"
+                )
+                ofch.save_chaine_of()
+        return jsonify({"message": "ofs_chaines added successfully"}, 200)
+    else:
+        return jsonify({"message": "Vous n'etes pas autorisé pour cette focntion"}, 401)
+
+@manage_ofs_bp.get("/getofsChaines")
 @jwt_required()
-def updateUser():
-    if current_user.role == "userManager":
-        data=request.get_json()
-        id=data.get("id")
-        user=User.get_user_byId(id=id)
-        if user is not None:
-            user.update_user(data)
-            return jsonify({
-            "message":"user updated successfully"
-            },201)
+def getOFSChainesByreference():
+    if current_user.role == "production":
+        data = request.get_json().get('prefix')
+        ofs=OFS.get_ofs_chaines(data)
+        ofs_result = GetOfsForUpdate().dump(ofs, many=True)
         return jsonify({
-            "message":"user n'existe pas dans la base"
-        },404)
-
-
-@manage_ofs_bp.get("/getUserById")
+            "ofs":ofs_result,
+            },200)
+    return jsonify({
+       "message":"unauthorized"
+    },401)
+@manage_ofs_bp.get("/getInprogressOFS")
 @jwt_required()
-def getUserById():
-    if current_user.role == "userManager":
-        data = request.get_json()
-        id = data.get("id")
-        user = User.get_user_byId(id=id)
-        if user is not None:
-            return jsonify({
-                "user": user.to_dict(),
-            }, 200)
+def getInprogressOFS():
+    if current_user.role == "production":
+        prefix = request.get_json().get('prefix')
+        idchaine=request.get_json().get('idchaine')
+        ofs=OFS.get_inprogress_ofs(prefix,idchaine)
+        ofs_result = GetOfsForUpdate().dump(ofs, many=True)
         return jsonify({
-            "message": "user n'existe pas dans la base"
-        },404)
+            "ofs":ofs_result,
+            },200)
+    return jsonify({
+       "message":"unauthorized"
+    },401)
 
-@manage_ofs_bp.put("/updateAuthorization")
+@manage_ofs_bp.get("/getofs_byModele")
 @jwt_required()
-def updateAuthorization():
-    if current_user.role == "userManager":
-        data=request.get_json()
-        id=data.get("id")
-        user=User.get_user_byId(id=id)
-        if user is not None:
-            user.update_authorization(data.get("authorized"))
-            return jsonify({
-            "message":"user updated successfully"
-            },201)
+def getofs_byModele():
+    if current_user.role == "production":
+        prefix = request.get_json().get('numof')
+        ofs=OFS.get_ofs_by_modele(prefix)
+        ofs_result = GetOfsByModele().dump(ofs, many=True)
         return jsonify({
-            "message":"user n'existe pas dans la base"
-        },404)
-
+            "ofs":ofs_result,
+            },200)
+    return jsonify({
+       "message":"unauthorized"
+    },401)
 

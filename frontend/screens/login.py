@@ -25,7 +25,6 @@ class LoginScreen(Screen):
         login_value = self.ids.login.text
         password_value = self.ids.password.text
 
-        print(f"Login: {login_value}, Password: {password_value}")
         if not login_value:
             self.ids.login_error.text = "Veuillez entrer un nom d'utilisateur"
         else:
@@ -46,12 +45,8 @@ class LoginScreen(Screen):
 
             try:
                 response = requests.post(url, json=data)
-
-                print("ffffff",response.json())
-
                 print(data)
                 if response.status_code == 200:
-                    print("logged innnnnnnnnnnnn")
                     self.ids.login.text=""
                     self.ids.password.text=""
                     data = response.json()[0]

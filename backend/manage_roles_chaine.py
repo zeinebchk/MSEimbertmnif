@@ -1,6 +1,6 @@
 from flask import Blueprint,jsonify,request
 from models import TypeChaine
-from schemas import UserSchema,ChaineSchema
+from schemas import ChaineSchema
 from flask_jwt_extended import jwt_required, get_jwt, current_user
 
 manage_chaine_roles_bp=Blueprint('manage_roles_chaine', __name__)
@@ -37,24 +37,8 @@ def getAllRoles():
        "message":"unauthorized"
     },401),
 
-# @manage_chaine_roles_bp.put("/updateUser")
-# @jwt_required()
-# def updateChaineOrRole():
-#     if current_user.role == "userManager":
-#         data=request.get_json()
-#         id=data.get("id")
-#         user=User.get_user_byId(id=id)
-#         if user is not None:
-#             user.update_user(data)
-#             return jsonify({
-#             "message":"user updated successfully"
-#             },201)
-#         return jsonify({
-#             "message":"user n'existe pas dans la base"
-#         },404)
 
-
-@manage_chaine_roles_bp.get("/getUserById")
+@manage_chaine_roles_bp.get("/getChaineOrRoleByID")
 @jwt_required()
 def getRoleById():
     if current_user.role == "userManager":

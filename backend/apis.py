@@ -1,14 +1,11 @@
 import os
 import sys
 
-from adodbapi.apibase import identity
 from flask import Flask, request,jsonify
-import mysql.connector
 from flask.cli import load_dotenv
 from flask_migrate import Migrate
 from extension import db,jwt
-from models import User
-from flask_sqlalchemy import SQLAlchemy
+
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from manage_users import manageusers_bp

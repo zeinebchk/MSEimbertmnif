@@ -10,14 +10,11 @@ def make_request(method,endpoint,**kwargs):
     headers["Authorization"]=f"Bearer {session.get_access_token()}"
 
     try:
-        print("access_token", session.get_access_token())
         print(BASE_URL+endpoint)
         response=requests.request(method,BASE_URL+endpoint,headers=headers,**kwargs)
-        print("make request",response.json())
         if response.json()[1] == 401:
             res=refrech_token()
             if res:
-                print("refresh make request")
                 headers["Authorization"]=f"Bearer {session.get_access_token()}"
                 response = requests.request(method,BASE_URL+ endpoint, headers=headers, **kwargs)
                 print("make requestttt rsult in refresh",response)
@@ -29,7 +26,6 @@ def make_request(method,endpoint,**kwargs):
 
 
 def refrech_token():
-    print("refrech_tokennnnnnnnnnnnnnnnnn")
     session=SessionManager.get_instance()
     refresh_token=session.get_refresh_token()
     url = BASE_URL+"/auth/refreshtoken"

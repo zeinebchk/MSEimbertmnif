@@ -1,16 +1,17 @@
-<DashboardScreen>:
-    search_input: search_input
-    status_label: status_label
-    table_grid: table_grid
-    table_scroll: table_scroll
-    header_scroll: header_scroll
-
+<UpdateLaunchScreen>:
+    # Fond d'écran
     canvas.before:
         Color:
-            rgba: 0.95, 0.95, 0.95, 1
+            rgba: 0.95, 0.95, 0.95, 1  # Gris clair
         Rectangle:
             pos: self.pos
             size: self.size
+
+    # Références aux IDs
+    search_input: search_input
+    table_grid: table_grid
+    table_scroll: table_scroll
+    header_scroll: header_scroll
 
     ScrollView:
         do_scroll_x: False
@@ -26,7 +27,7 @@
             padding: dp(15)
             spacing: dp(10)
 
-            # --- En-tête ---
+            # En-tête
             BoxLayout:
                 size_hint_y: None
                 height: dp(50)
@@ -34,7 +35,7 @@
                 spacing: dp(10)
                 canvas.before:
                     Color:
-                        rgba: 0.2, 0.5, 0.8, 1
+                        rgba: 0.2, 0.5, 0.8, 1  # Bleu clair
                     Rectangle:
                         pos: self.pos
                         size: self.size
@@ -50,14 +51,14 @@
                     size_hint_x: 1
                     text_size: self.size
 
-            # --- Contenu principal (Sidebar + Formulaire/Tableau) ---
+            # Contenu principal (barre latérale + formulaire)
             BoxLayout:
                 orientation: 'horizontal'
                 size_hint_y: None
                 height: self.minimum_height
                 spacing: dp(10)
 
-                # --- Sidebar ---
+                # Barre latérale
                 BoxLayout:
                     orientation: 'vertical'
                     size_hint_x: 0.2
@@ -65,7 +66,7 @@
                     spacing: dp(10)
                     canvas.before:
                         Color:
-                            rgba: 0.8, 0.8, 0.8, 1
+                            rgba: 0.8, 0.8, 0.8, 1  # Gris moyen
                         Rectangle:
                             pos: self.pos
                             size: self.size
@@ -78,29 +79,28 @@
                         background_normal: ''
                         background_color: 0.9, 0.9, 0.9, 1
                         on_release: app.root_to_lancement()
-                        text_size: self.size
-                        halign: 'center'
-                        valign: 'middle'
-                        padding: dp(5), dp(5)
+                        text_size: self.size  # ➜ autorise le retour à la ligne
+                        halign: 'center'      # ➜ centre horizontalement le texte
+                        valign: 'middle'      # ➜ centre verticalement le texte
+                        padding: dp(5), dp(5) # ➜ optionnel : ajoute un peu de marge intérieure
                         canvas.before:
                             Color:
                                 rgba: 0.7, 0.7, 0.7, 1
                             Line:
                                 rectangle: (self.x, self.y, self.width, self.height)
                                 width: 1
-
                     Button:
-                        text: "Modification du lancement"
+                        text: " modification du lancement"
                         font_name: 'EmojiFont'
                         color: 0, 0, 0, 1
                         font_size: '16sp'
                         background_normal: ''
                         background_color: 0.9, 0.9, 0.9, 1
                         on_release: app.root_to_update_launch()
-                        text_size: self.size
-                        halign: 'center'
-                        valign: 'middle'
-                        padding: dp(5), dp(5)
+                        text_size: self.size  # ➜ autorise le retour à la ligne
+                        halign: 'center'      # ➜ centre horizontalement le texte
+                        valign: 'middle'      # ➜ centre verticalement le texte
+                        padding: dp(5), dp(5) # ➜ optionnel : ajoute un peu de marge intérieure
                         canvas.before:
                             Color:
                                 rgba: 0.7, 0.7, 0.7, 1
@@ -115,6 +115,11 @@
                         font_size: '16sp'
                         background_normal: ''
                         background_color: 0.9, 0.9, 0.9, 1
+                        on_release: app.root_to_update_launch()
+                        text_size: self.size  # ➜ autorise le retour à la ligne
+                        halign: 'center'      # ➜ centre horizontalement le texte
+                        valign: 'middle'      # ➜ centre verticalement le texte
+                        padding: dp(5), dp(5) # ➜ optionnel : ajoute un peu de marge intérieure
                         canvas.before:
                             Color:
                                 rgba: 0.7, 0.7, 0.7, 1
@@ -123,13 +128,17 @@
                                 width: 1
 
                     Button:
-                        text: "Déconnexion"
+                        text: "déconnexion"
                         on_release: app.logout()
                         font_name: 'EmojiFont'
                         color: 0, 0, 0, 1
                         font_size: '16sp'
                         background_normal: ''
                         background_color: 0.9, 0.9, 0.9, 1
+                        text_size: self.size  # ➜ autorise le retour à la ligne
+                        halign: 'center'      # ➜ centre horizontalement le texte
+                        valign: 'middle'      # ➜ centre verticalement le texte
+                        padding: dp(5), dp(5) # ➜ optionnel : ajoute un peu de marge intérieure
                         canvas.before:
                             Color:
                                 rgba: 0.7, 0.7, 0.7, 1
@@ -137,35 +146,27 @@
                                 rectangle: (self.x, self.y, self.width, self.height)
                                 width: 1
 
-                # --- Contenu principal à droite ---
+                # Formulaire et tableau
                 BoxLayout:
                     orientation: 'vertical'
                     spacing: dp(15)
                     padding: dp(15)
                     size_hint_y: None
+
                     height: self.minimum_height
 
-                    # --- Formulaire de recherche ---
+                    # Formulaire de recherche
                     BoxLayout:
-                        opacity: 1 if root.show_table else 0
+                        opacity:1
                         size_hint_y: None
                         height: dp(50)
                         spacing: dp(10)
-
-                        Spinner:
-                            id: column_spinner
-                            text: "Toutes les colonnes"
-                            values: ["Toutes les colonnes", "dateLancement", "numOF", "Modele", "Coloris", "SAIS","Pointure"]
-                            size_hint_x: 0.25
-                            font_size: 16
-                            background_color: 0.95, 0.95, 0.95, 1
-                            color: 0, 0, 0, 1
 
                         TextInput:
                             id: search_input
                             hint_text: '🔍 Rechercher...'
                             font_name: 'EmojiFont'
-                            size_hint_x: 0.4
+                            size_hint_x: 0.5
                             multiline: False
                             font_size: 18
                             foreground_color: 0, 0, 0, 1
@@ -213,18 +214,9 @@
                                     rectangle: (self.x, self.y, self.width, self.height)
                                     width: 1
 
-                    Label:
-                        id: status_label
-                        text: ''
-                        font_name: 'EmojiFont'
-                        size_hint_y: None
-                        height: dp(30)
-                        color: 0.2, 0.2, 0.2, 1
-                        font_size: '14sp'
-
-                    # --- Tableau ---
+                    # Tableau de données
                     BoxLayout:
-                        opacity: 1 if root.show_table else 0
+                        opacity:1
                         id: box_table_container
                         orientation: 'vertical'
                         size_hint_x: 1
@@ -237,7 +229,6 @@
                             do_scroll_y: False
                             size_hint_y: None
                             height: dp(40)
-
                             GridLayout:
                                 id: header_grid
                                 size_hint_y: None
@@ -250,7 +241,6 @@
                             id: table_scroll
                             do_scroll_x: True
                             do_scroll_y: True
-
                             GridLayout:
                                 id: table_grid
                                 size_hint_y: None
@@ -259,17 +249,21 @@
                                 width: self.minimum_width
                                 cols: 1
 
-                    # --- Cases à cocher ---
+
+                    # Cases à cocher pour typeChaine et chainePicure
                     BoxLayout:
-                        opacity: 1 if root.show_table else 0
+                        opacity:1
                         orientation: 'vertical'
+
                         id: my_checkbox
                         size_hint_y: None
-                        height: self.minimum_height
+                        height:self.minimum_height
                         padding: dp(20)
                         spacing: dp(15)
 
+                        # Titre principal
                         Label:
+                            opacity:1
                             text: "🛠️ Sélectionner type de chaîne"
                             font_name: 'EmojiFont'
                             font_size: 28
@@ -284,15 +278,18 @@
                                     pos: self.pos
                                     size: self.size
 
+                        # Toutes les cases à cocher
                         GridLayout:
-                            id: type_chaine
+                            opacity:1
                             cols: 2
                             size_hint_y: None
+                            height: size_hint_y: None
                             height: self.minimum_height
                             spacing: dp(30)
                             padding: dp(30)
                             row_default_height: dp(40)
                             row_force_default: True
+                            id:type_chaine
                             canvas.before:
                                 Color:
                                     rgba: 0.98, 0.98, 0.98, 1
@@ -311,9 +308,10 @@
                             font_size: '16sp'
                             size_hint_y: None
                             height: dp(50)
+                            opacity:1
                             background_normal: ''
                             background_color: 1, 0.85, 0.4, 1
-                            on_release: root.save_ofs_typechaine()
+                            on_release:root.save_ofs_typechaine()
                             canvas.before:
                                 Color:
                                     rgba: 0.7, 0.7, 0.7, 1

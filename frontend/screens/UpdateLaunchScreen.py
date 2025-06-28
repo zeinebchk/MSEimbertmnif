@@ -1,7 +1,11 @@
+from datetime import datetime
+
 import numpy as np
 from kivy.app import App
 from kivy.lang import Builder
 from kivy.uix.checkbox import CheckBox
+from kivy.uix.dropdown import DropDown
+from kivy.uix.gridlayout import GridLayout
 from kivy.uix.screenmanager import Screen
 from kivy.properties import ObjectProperty, BooleanProperty
 from kivy.metrics import dp
@@ -14,14 +18,15 @@ from kivy.graphics import Color, Line
 import pandas as pd
 import os
 
+from kivy.uix.spinner import Spinner
 from sqlalchemy import Selectable
 
 from frontend.Client import make_request
 
 
-class DashboardScreen(Screen):
+class UpdateLaunchScreen(Screen):
     show_checkbox = BooleanProperty(False)
-    show_table= BooleanProperty(False)
+
     search_input = ObjectProperty()
     status_label = ObjectProperty()
     table_grid = ObjectProperty()
@@ -34,19 +39,62 @@ class DashboardScreen(Screen):
         self.of_chaines = []
         self.df = []
         self.selected_rows = []
-        self.checks = ['coupe']
+        self.checks = []
         self.checksChainePicure=[]
-
+        self.type_options = ["piqure", "montage", "coupe"]
+        self.selected_types = set()
+        self.dropdown = None
+        self.old_chaines=[]
     def on_parent(self, *args):
         # Synchronize horizontal scrolling between header_scroll and table_scroll
         if hasattr(self, 'table_scroll') and hasattr(self, 'header_scroll'):
             self.table_scroll.bind(scroll_x=self.header_scroll.setter('scroll_x'))
             self.header_scroll.bind(scroll_x=self.table_scroll.setter('scroll_x'))
+  # ou MDScreen si tu utilises KivyMD
+    def open_calendar(self):
+        layout = GridLayout(cols=2, padding=10, spacing=10)
+
+        # Spinners pour jour, mois, année
+        self.day_spinner = Spinner(text="1", values=[str(i) for i in range(1, 32)])
+        self.month_spinner = Spinner(text="1", values=[str(i) for i in range(1, 13)])
+        self.year_spinner = Spinner(text="2025", values=[str(i) for i in range(2000, 2031)])
+
+        layout.add_widget(Label(text="Jour:"))
+        layout.add_widget(self.day_spinner)
+        layout.add_widget(Label(text="Mois:"))
+        layout.add_widget(self.month_spinner)
+        layout.add_widget(Label(text="Année:"))
+        layout.add_widget(self.year_spinner)
+
+        # Bouton de validation
+        select_button = Button(text="Sélectionner", size_hint_y=None, height=40)
+        select_button.bind(on_release=self.validate_date)
+
+        layout.add_widget(Label())  # espace vide
+        layout.add_widget(select_button)
+
+        self.popup = Popup(title="Choisir une date", content=layout, size_hint=(None, None), size=(400, 300))
+        self.popup.open()
+
+    def validate_date(self, instance):
+        jour = self.day_spinner.text
+        mois = self.month_spinner.text
+        annee = self.year_spinner.text
+
+        try:
+            selected_date = datetime(int(annee), int(mois), int(jour))
+            print(f"📅 Date sélectionnée : {selected_date.strftime('%Y-%m-%d')}")
+            # Tu peux l’enregistrer ou l’afficher dans un Label ici
+            self.popup.dismiss()
+        except ValueError:
+            print("Date invalide")
 
     def loadofs(self):
-        response = make_request("get", "/manage_ofs/getAllLatestOfs")
+        data={
+            "prefix":self.ids.search_input.text.lower()
+        }
+        response = make_request("get", "/manage_ofs/getofsChaines",json=data)
         if response.status_code == 200:
-            print("aaaaaaaaaaaaaaaaaaaaaaaa")
             self.df = response.json()[0].get("ofs", [])
             print(self.df)
             self.populate_table()# Extraire la liste des OFs
@@ -55,16 +103,17 @@ class DashboardScreen(Screen):
     def populate_table(self):
         self.table_grid.clear_widgets()
         self.ids.header_grid.clear_widgets()
-        print( "populaaaaaate")
 
 
         # Ordre explicite des colonnes
-        columns = ['numOF', 'Pointure', 'Quantite', 'Coloris', 'Modele', 'SAIS', 'dateLancement','dateCreation','etat']
+        columns = ['numOF', 'Pointure', 'Quantite', 'Coloris', 'Modele', 'SAIS', 'dateLancement',"parcours"]
         n_cols = len(columns)
         row_height = dp(40)
 
         # Largeur des colonnes
         col_widths = [dp(120)] * n_cols
+        parcours_index = columns.index("parcours")
+        col_widths[parcours_index] = dp(250)
         total_width = sum(col_widths)
 
         # En-têtes
@@ -112,22 +161,13 @@ class DashboardScreen(Screen):
             row_widget = SelectableRow(row_data, col_widths,on_selection_change=self.on_row_selection_changed)
             self.table_grid.add_widget(row_widget)
 
+
     def search(self):
         search_text = self.ids.search_input.text.lower()
-        selected_column = self.ids.column_spinner.text
-
-        if search_text and selected_column in ["dateLancement", "numOF", "Modele", "Coloris", "SAIS","Pointure"]:
-            self.df = [
-                item for item in self.df
-                if str(item.get(selected_column, "")).lower().startswith(search_text)
-            ]
-            self.populate_table()
-            self.ids.search_input.text = ""
-            self.status_label.text = f"{len(self.df)} lignes affichées après filtrage"
-            self.status_label.color = (0.05, 0.4, 0.75, 1)
-            print("filtered data:", self.df)
+        if search_text:
+            self.loadofs()
         else:
-            self.show_popup("Attention", "Veuillez entrer un texte valide et choisir une colonne.")
+            self.show_popup("Attention","veuillez ecrire un texte valide")
 
     def reset_filter(self):
         self.loadofs()
@@ -188,16 +228,6 @@ class DashboardScreen(Screen):
         popup.content = content
         popup.open()
     def on_enter(self):
-        self.ids.search_input.text = ""
-        self.loadofs()
-        if not self.df:
-            self.ids.status_label.text="vous n'avez aucun ordre de fabrication a lancer pour l'instant"
-        else:
-            self.ids.status_label.text=""
-
-            self.show_table=True
-            self.show_checkbox=True
-            self.populate_table()
             grid_checkbox=self.ids.type_chaine
             grid_checkbox.clear_widgets()
             roles=self.loadType_chaine()
@@ -211,7 +241,6 @@ class DashboardScreen(Screen):
                 checkbox = CheckBox(
                     size_hint_x=0.3,
                     color=(0.49, 0.48, 0.49, 1),
-                    active=(role.lower() == "coupe")
 
                 )
                 checkbox.bind(active=lambda cb, val, role_name=role: self.checkbox_typeChaine(cb, val, role_name))
@@ -240,6 +269,7 @@ class DashboardScreen(Screen):
         print(f"Current checks: {self.checks}")
 
     def get_selected_rows(self):
+        columns=[]
         selected = []
         for child in self.ids.table_grid.children:
             if isinstance(child, SelectableRow) and child.is_selected():
@@ -247,42 +277,79 @@ class DashboardScreen(Screen):
         return selected
 
     def on_row_selection_changed(self):
+        self.selected_rows = []
         selected_rows = self.get_selected_rows()
-        print("Lignes sélectionnées :", selected_rows)
+        for row in selected_rows:
+           dict={}
+           dict["numOF"]=row[0]
+           dict["Pointure"]=row[1]
+           dict["Quantite"]=row[2]
+           dict["Coloris"]=row[3]
+           dict["Modele"]=row[4]
+           dict["SAIS"]=row[5]
+           dict["dateLancement"]=row[6]
+           dict["parcours"]=row[7]
+           self.selected_rows.append(dict)
+        print("Lignes sélectionnées :", self.selected_rows)
+
+    def verify_chaines(self,chaine):
+        return chaine in self.old_chaines
 
     def save_ofs_typechaine(self):
-        self.of_chaines.clear()
-        print("saveeeeeeee df",self.df)
-        for of in self.df:
-            num_of = of.get("numOF")
-            for chaine in self.checks:
-                ofchaine = {
-                    "idchaine": chaine,
-                    "numCommandeOF": num_of
-                }
-                self.of_chaines.append(ofchaine)
-        print(self.of_chaines)
-        response = make_request("post", "/manage_ofs/addOfs_chaines", json=self.of_chaines)
-        print("response",response)
-        if response.status_code== 200:
-            print("200000000000000000000000000000000000000")
-
-            self.show_popup("succées","OF enregistréé avec succées")
-            self.loadofs()
-            if not self.df:
-                self.ids.status_label.text = "vous n'avez aucun ordre de fabrication a lancer pour l'instant"
-                self.show_table=False
+        if not self.selected_rows and not self.df:
+            self.show_popup("Attention","aucun ordre de fabrication a modifier ")
+            return
+        if self.checks:
+            self.liste_for_update=[]
+            if self.selected_rows:
+                self.liste_for_update=self.selected_rows
             else:
-                self.ids.status_label.text = ""
-                self.show_table = True
-                self.show_checkbox = True
-                self.populate_table()
-                self.ids.search_input.text = ""
-        elif response.status_code == 409:
-            self.show_popup("Attention","l'affectation des chaines pour les ofs sont deja fait")
-        else:
-            self.show_popup("Erreur","Vous n'etes pas autorisé pour cette fonction")
+                self.liste_for_update=self.df
+            self.of_chaines.clear()
+            print("saveeeeeeee df",self.df)
+            row=self.liste_for_update[0]["parcours"]
+            self.old_chaines = list(set(row.split(",")))
+            for of in self.liste_for_update:
+                num_of = of.get("numOF")
+                parcours = of.get("parcours")
+                chaines = [ch.strip() for ch in parcours.split(",") if ch.strip()]
+                print("chainees",chaines)# nettoyer et séparer
+                for ch in chaines:
+                    print(self.old_chaines)
+                    if not self.verify_chaines(ch):
+                        self.show_popup("Attention","veuillez choisir des of avec des parcours compatibles")
+                        return
+                for chaine in self.checks:
+                    ofchaine = {
+                        "idchaine": chaine,
+                        "numCommandeOF": num_of
+                    }
+                    self.of_chaines.append(ofchaine)
+            print(self.of_chaines)
+            data={
+                "chaines":self.old_chaines,
+                "ofs_chaines": self.of_chaines
+            }
+            print("dataaaaaaaaaaaaaaaaaaaaaaa",data)
+            response = make_request("put", "/manage_ofs/update_of_chaine", json=data)
+            print("response",response)
+            if response.status_code== 200:
+                print("200000000000000000000000000000000000000")
 
+                self.show_popup("succées","OF enregistréé avec succées")
+                self.loadofs()
+                if not self.df:
+                    self.ids.status_label.text = "vous n'avez aucun ordre de fabrication a lancer pour l'instant"
+                    self.show_table=False
+                else:
+                    pass
+            elif response.status_code == 409:
+                self.show_popup("Attention","l'affectation des chaines pour les ofs sont deja fait")
+            else:
+                self.show_popup("Erreur","Vous n'etes pas autorisé pour cette fonction")
+        else:
+            self.show_popup("attention","veuillez seectionner des nouvelles chaines ")
+            return
 
 
 

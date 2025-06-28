@@ -12,7 +12,7 @@ from frontend.Client import make_request
 from frontend.SessionManager import SessionManager
 
 
-class GestionRoleScreen(Screen):
+class RoleManagementScreen(Screen):
     show_modification = BooleanProperty(False)
     def __init__(self, **kwargs):
         session = SessionManager.get_instance()
