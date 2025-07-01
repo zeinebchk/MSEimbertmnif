@@ -50,3 +50,21 @@ class GetOfsByModele(Schema):
     dateCreation = fields.Date()
     total_quantite=fields.Integer()
     total_ofs=fields.Integer()
+class GetofsGroupByidChaineSchema(Schema):
+    __tablename__ = 'ofs_chaine'
+    idChaine=fields.String()
+    dateLancement_of_chaine=fields.Date()
+    dateFin=fields.Date()
+    etat=fields.String()
+    matOuvrier=fields.Integer()
+    nb_en_attente=fields.Integer()
+    nb_en_cours=fields.Integer()
+    nb_termine=fields.Integer()
+
+class GetofsByidChaineSchema(Schema):
+    __tablename__ = 'ofs_chaine'
+    numCommandeOF=fields.Integer()
+    dateLancement_of_chaine=fields.Date()
+    dateFin=fields.Date()
+    etat=fields.String()
+    ouvriers=fields.String()

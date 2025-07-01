@@ -1,8 +1,8 @@
 from datetime import datetime
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import ForeignKey, func, join, cast, String
-from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKey, func, join, cast, String, case, distinct
+from sqlalchemy.orm import relationship, aliased
 
 from extension import db
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -102,11 +102,12 @@ class OFS(db.Model):
                 cls.Modele,
                 cls.Coloris,
                 cls.dateCreation,
+                cls.SAIS,
                 func.sum(cls.Quantite).label("total_quantite"),
                 func.count(cls.numOF).label("total_ofs")
             )
             .filter(cast(cls.numOF, String).like(pattern))
-            .group_by(cls.Modele, cls.Coloris, cls.dateCreation)
+            .group_by(cls.Modele, cls.Coloris, cls.dateCreation, cls.SAIS)
             .all()
         )
 
@@ -207,8 +208,173 @@ class OFSChaine(db.Model):
     def get_ofs_chaine_by_numOF(cls,numOf,idch):
         return cls.query.filter_by(numCommandeOF=numOf,idChaine=idch).first()
 
+    @classmethod
+    def get_nb_of_termine_par_modele(cls, modele_donne, num):
+        num_str = str(num)
+
+        # Convertir numOF en string
+        numof_str = cast(OFS.numOF, String)
+
+        # Longueur du numOF
+        length_numof = func.length(numof_str)
+
+        # Sous-chaîne à partir de position conditionnelle
+        substring_cond = case(
+            (length_numof == 6, func.substr(numof_str, 2)),
+            (length_numof == 8, func.substr(numof_str, 4)),
+            else_=func.substr(numof_str, 2)  # fallback
+        )
+
+        subquery = (
+            db.session.query(
+                OFS.numOF.label("numOF"),
+                OFS.Modele.label("Modele"),
+                func.sum(
+                    case(
+                        (OFSChaine.etat != "termine", 1),
+                        else_=0
+                    )
+                ).label("non_termine_count")
+            )
+            .join(OFSChaine, OFS.numOF == OFSChaine.numCommandeOF)
+            .group_by(OFS.numOF, OFS.Modele)
+            .subquery()
+        )
+
+        query = (
+            db.session.query(
+                subquery.c.Modele,
+                func.count(subquery.c.numOF.distinct()).label("nb_termine")
+            )
+            .filter(subquery.c.non_termine_count == 0)
+            .filter(subquery.c.Modele == modele_donne)
+            .filter(substring_cond.like(f"%{num_str}%"))  # match sur sous-chaîne dynamique
+            .group_by(subquery.c.Modele)
+        )
+
+        return query.all()
 
 
+    @classmethod
+    def getofsJOINOuvriersby_modele_num_chaine(cls,modele_donne,num,chaine):
+        # Conversion numOF en string
+        num_str = str(num)
+        numof_str = cast(OFSChaine.numCommandeOF, String)
+        length_numof = func.length(numof_str)
+
+        # Calcul dynamique de la position
+        start_pos = case(
+            (length_numof == 6, 2),
+            else_=4
+        )
+
+        substring_cond = case(
+            (length_numof == 6, func.substr(numof_str, 2)),
+            (length_numof == 8, func.substr(numof_str, 4)),
+            else_=func.substr(numof_str, 2)  # fallback
+        )
+        query = db.session.query(
+            OFSChaine.numCommandeOF,
+            OFSChaine.dateLancement_of_chaine,
+            OFSChaine.dateFin,
+            OFSChaine.etat,
+            func.coalesce(
+                func.group_concat(ouvrier_chaine_ofs.matOuvrier.op('SEPARATOR')(', ')),
+                "-"
+            ).label("ouvriers")
+        ).join(
+            OFS, OFS.numOF == OFSChaine.numCommandeOF
+        ).join(
+            ouvrier_chaine_ofs, OFSChaine.numCommandeOF == ouvrier_chaine_ofs.numCommandeOF,
+            isouter=True  # important si tu veux inclure les cas sans ouvriers
+        ).filter(
+            OFS.Modele == modele_donne,
+            substring_cond.like(f"%{num_str}%"),
+            OFSChaine.idChaine == chaine
+
+        ).group_by(
+            OFSChaine.numCommandeOF
+        )
+        return query.all()
+
+    #afficher les ofs dans la table ofschaines par chaine et le nombres des of encours,termine et en attente
+    @classmethod
+    def get_all_ofchaines_by_modeleAndnumOf(cls, modele_donne, num):
+        num_str = str(num)
+
+        # Convertir numOF en chaîne de caractères
+        numof_str = cast(OFS.numOF, String)
+
+        # Longueur du numOF
+        length_numof = func.length(numof_str)
+
+        # Extraction conditionnelle selon la longueur
+        substring_cond = case(
+            (length_numof == 6, func.substr(numof_str, 2)),
+            (length_numof == 8, func.substr(numof_str, 4)),
+            else_=func.substr(numof_str, 2)  # fallback
+        )
+
+        query = (
+            db.session.query(
+                OFSChaine.idChaine,
+                func.sum(case((OFSChaine.etat == "enAttente", 1), else_=0)).label("nb_en_attente"),
+                func.sum(case((OFSChaine.etat == "enCours", 1), else_=0)).label("nb_en_cours"),
+                func.sum(case((OFSChaine.etat == "termine", 1), else_=0)).label("nb_termine")
+            )
+            .join(OFS, OFS.numOF == OFSChaine.numCommandeOF)
+            .filter(OFS.Modele == modele_donne)
+            .filter(substring_cond.like(f"%{num_str}%"))  # filtre dynamique
+            .group_by(OFSChaine.idChaine)
+        )
+
+        return query.all()
+
+    @classmethod
+    def get_inProgress_ofs_by_modele(cls,modele,num):
+        num_str = str(num)
+        numof_str = cast(OFS.numOF, String)
+        length_numof = func.length(numof_str)
+
+        # Extraire la sous-chaîne en fonction de la longueur de numOF
+        substring_cond = case(
+            (length_numof == 6, func.substr(numof_str, 2)),
+            (length_numof == 8, func.substr(numof_str, 4)),
+            else_=func.substr(numof_str, 2)  # fallback
+        )
+
+        query = (
+            db.session.query(
+                OFS.Modele,
+                func.count(func.distinct(OFSChaine.numCommandeOF)).label("nb_en_cours")
+            )
+            .join(OFSChaine, OFS.numOF == OFSChaine.numCommandeOF)
+            .filter(
+                OFSChaine.etat == "enCours",
+                substring_cond.like(f"%{num_str}%"),
+                OFS.Modele == modele
+            )
+            .group_by(OFS.Modele)
+        )
+        return query.all()
+
+    @classmethod
+    def get_waiting_ofs(cls,modele, num):
+        query = (
+            db.session.query(
+                OFS.Modele,
+                func.count(distinct(OFSChaine.numCommandeOF)).label('nb_enAttente')
+            )
+            .join(OFSChaine, OFS.numOF == OFSChaine.numCommandeOF)
+            .filter(
+                OFS.Modele == modele,
+                func.substr(cast(OFS.numOF, String), 2).like(f"{num}%"),
+                OFSChaine.idChaine == 'coupe',
+                OFSChaine.etat == 'enAttente'
+            )
+            .group_by(OFS.Modele)
+        )
+        return query.all()
 
 
 class  Ouvriers(db.Model):

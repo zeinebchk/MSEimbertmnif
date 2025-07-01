@@ -1,23 +1,26 @@
-
-from kivy.atlas import CoreImage
+import numpy as np
+from kivy.app import App
+from kivy.lang import Builder
+from kivy.uix.checkbox import CheckBox
 from kivy.uix.screenmanager import Screen
 from kivy.properties import ObjectProperty, BooleanProperty
-
+from kivy.metrics import dp
 from kivy.uix.popup import Popup
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
 from kivy.uix.button import Button
-from kivy.uix.image import Image
-from kivy.core.image import Image as CoreImage
-import io
-from kivy_garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_agg import FigureCanvasAgg
+from kivy.core.window import Window
+from kivy.graphics import Color, Line
+import pandas as pd
+import os
 
+from sqlalchemy import Selectable
 
 from frontend.Client import make_request
 
 
-class DashboardScreen(Screen):
-
+class LaunchScreen(Screen):
+    show_checkbox = BooleanProperty(False)
     show_table= BooleanProperty(False)
     search_input = ObjectProperty()
     status_label = ObjectProperty()
@@ -31,8 +34,9 @@ class DashboardScreen(Screen):
         self.of_chaines = []
         self.df = []
         self.selected_rows = []
-        self.models=[]
-        self.statistics=[]
+        self.checks = ['coupe']
+        self.checksChainePicure=[]
+
     def on_parent(self, *args):
         # Synchronize horizontal scrolling between header_scroll and table_scroll
         if hasattr(self, 'table_scroll') and hasattr(self, 'header_scroll'):
@@ -40,12 +44,9 @@ class DashboardScreen(Screen):
             self.header_scroll.bind(scroll_x=self.table_scroll.setter('scroll_x'))
 
     def loadofs(self):
-        search_text = self.ids.search_input.text.lower()
-        data={
-            "numof": search_text
-        }
-        response = make_request("get", "/manage_ofs/getofs_byModele",json=data)
+        response = make_request("get", "/manage_ofs/getAllLatestOfs")
         if response.status_code == 200:
+            print("aaaaaaaaaaaaaaaaaaaaaaaa")
             self.df = response.json()[0].get("ofs", [])
             print(self.df)
             self.populate_table()# Extraire la liste des OFs
@@ -58,7 +59,7 @@ class DashboardScreen(Screen):
 
 
         # Ordre explicite des colonnes
-        columns = [ "Modele","total_quantite","Coloris","SAIS","dateCreation", "total_ofs"  ]
+        columns = ['numOF', 'Pointure', 'Quantite', 'Coloris', 'Modele', 'SAIS', 'dateLancement','dateCreation','etat']
         n_cols = len(columns)
         row_height = dp(40)
 
@@ -112,34 +113,33 @@ class DashboardScreen(Screen):
             self.table_grid.add_widget(row_widget)
 
     def search(self):
-        self.models=[]
         search_text = self.ids.search_input.text.lower()
-        if search_text !="":
-            data = {
-                "numof": search_text
-            }
-            response = make_request("get", "/manage_ofs/getofs_byModele", json=data)
-            if response.status_code == 200:
-                self.show_table=True
-                self.df = response.json()[0].get("ofs", [])
-                if self.df:
-                    self.show_table=True
-                    for model in self.df:
-                        self.models.append((model["Modele"]))
-                        self.models=list(set(self.models))
-                    self.ids.model_id.values=self.models
-                    print(self.df)
-                    self.loadStatistics()
-                    self.populate_table()
-                else:
-                    self.show_popup("Erreur", "Vous n'avez pas des modeles lancé dans cette date")
-                    return
-                    # Extraire la liste des OFs
-            if not self.df:
-                return
+        selected_column = self.ids.column_spinner.text
+
+        if search_text and selected_column in ["dateLancement", "numOF", "Modele", "Coloris", "SAIS","Pointure"]:
+            self.df = [
+                item for item in self.df
+                if str(item.get(selected_column, "")).lower().startswith(search_text)
+            ]
+            self.populate_table()
+            self.ids.search_input.text = ""
+            self.status_label.text = f"{len(self.df)} lignes affichées après filtrage"
+            self.status_label.color = (0.05, 0.4, 0.75, 1)
+            print("filtered data:", self.df)
         else:
-            self.show_popup("Attention","veuillez saisir un numero valide" )
-            return
+            self.show_popup("Attention", "Veuillez entrer un texte valide et choisir une colonne.")
+
+    def reset_filter(self):
+        self.loadofs()
+        if not self.df:
+            self.ids.status_label.text="vous n'avez aucun ordre de fabrication a lancer pour l'instant"
+        else:
+            self.ids.status_label.text=""
+            self.populate_table()
+            self.show_table=True
+            self.show_checkbox=True
+
+
     def show_popup(self, title, message):
         popup = Popup(
             title=title,
@@ -189,8 +189,55 @@ class DashboardScreen(Screen):
         popup.open()
     def on_enter(self):
         self.ids.search_input.text = ""
-        self.show_table=False
+        self.loadofs()
+        if not self.df:
+            self.ids.status_label.text="vous n'avez aucun ordre de fabrication a lancer pour l'instant"
+        else:
+            self.ids.status_label.text=""
 
+            self.show_table=True
+            self.show_checkbox=True
+            self.populate_table()
+            grid_checkbox=self.ids.type_chaine
+            grid_checkbox.clear_widgets()
+            roles=self.loadType_chaine()
+            for role in roles:
+                label = Label(
+                    text=role,
+                    font_size=22,
+                    bold=True,
+                    color=(0.1, 0.1, 0.1, 1),
+                )
+                checkbox = CheckBox(
+                    size_hint_x=0.3,
+                    color=(0.49, 0.48, 0.49, 1),
+                    active=(role.lower() == "coupe")
+
+                )
+                checkbox.bind(active=lambda cb, val, role_name=role: self.checkbox_typeChaine(cb, val, role_name))
+                grid_checkbox.add_widget(label)
+                grid_checkbox.add_widget(checkbox)
+
+    def loadType_chaine(self):
+        values = []
+        response = make_request("get", "/manage_chaine_roles/getAllRoles")
+        if response.status_code == 200:
+            data = response.json()[0].get("roles")
+            for role in data:
+                values.append(role["id"])
+            return values
+        else:
+            print("Erreur lors du chargement des utilisateurs :", response)
+
+    def checkbox_typeChaine(self, instance,value,topping):
+        print(value)
+        if value:
+            if topping not in self.checks:
+                self.checks.append(topping)
+        else:
+            if topping in self.checks:
+                self.checks.remove(topping)
+        print(f"Current checks: {self.checks}")
 
     def get_selected_rows(self):
         selected = []
@@ -203,71 +250,41 @@ class DashboardScreen(Screen):
         selected_rows = self.get_selected_rows()
         print("Lignes sélectionnées :", selected_rows)
 
-    def loadStatistics(self):
-        search_text = self.ids.search_input.text.lower()
-        data = {
-            "numof": search_text,
-            "models":self.models
-        }
-        response = make_request("get", "/manage_ofs/getStaticticPerModele", json=data)
-        if response.status_code == 200:
-            self.statistics = response.json()[0].get("statistics", [])
-            self.afficher_pie_chart(self.statistics)
+    def save_ofs_typechaine(self):
+        self.of_chaines.clear()
+        print("saveeeeeeee df",self.df)
+        for of in self.df:
+            num_of = of.get("numOF")
+            for chaine in self.checks:
+                ofchaine = {
+                    "idchaine": chaine,
+                    "numCommandeOF": num_of
+                }
+                self.of_chaines.append(ofchaine)
+        print(self.of_chaines)
+        response = make_request("post", "/manage_ofs/addOfs_chaines", json=self.of_chaines)
+        print("response",response)
+        if response.status_code== 200:
+            print("200000000000000000000000000000000000000")
 
-    def afficher_pie_chart(self, data):
-        self.ids.pie_chart_container.clear_widgets()
-        for item in data:
-            modele = item["modele"]
-            values = [item["nb_done"], item["nb_inProgress"], item["nb_waiting"]]
-            labels = ["Terminés", "En cours", "En attente"]
-            colors = ["#2ecc71", "#f1c40f", "#e74c3c"]
-            explode = (0.1, 0, 0)
-            fig, ax = plt.subplots(figsize=(5, 5))
-            fig.patch.set_alpha(0)  # fond transparent de la figure
-            ax.patch.set_alpha(0)
-            ax.pie(values, labels=labels,textprops={'fontsize': 14} , autopct='%1.1f%%', colors=colors, startangle=90, explode=explode, shadow=True)
-            ax.set_title(modele, fontsize=20,color="#34495e")
-            chart = FigureCanvasKivyAgg(fig)
-            chart.size_hint_x = None
-            chart.width = 450
-            self.ids.pie_chart_container.add_widget(chart)
+            self.show_popup("succées","OF enregistréé avec succées")
+            self.loadofs()
+            if not self.df:
+                self.ids.status_label.text = "vous n'avez aucun ordre de fabrication a lancer pour l'instant"
+                self.show_table=False
+            else:
+                self.ids.status_label.text = ""
+                self.show_table = True
+                self.show_checkbox = True
+                self.populate_table()
+                self.ids.search_input.text = ""
+        elif response.status_code == 409:
+            self.show_popup("Attention","l'affectation des chaines pour les ofs sont deja fait")
+        else:
+            self.show_popup("Erreur","Vous n'etes pas autorisé pour cette fonction")
 
-    def bar_chart(self, values):
-        self.ids.bar_chart_container.clear_widgets()
-        categories = ['En attente', 'En cours', 'Terminé']
-        colors=["#e9c46a","#2a9d8f","#264653"]
-        fig, ax = plt.subplots(figsize=(7,6))
-        fig.patch.set_alpha(0)  # fond transparent figure
-        ax.patch.set_alpha(0)  # fond transparent axes
 
-        bars = ax.barh(categories, values, color=colors)
 
-        # Ajouter valeur devant chaque barre
-        for bar in bars:
-            width = bar.get_width()
-            ax.text(width + 0.3, bar.get_y() + bar.get_height() / 2, str(int(width)),
-                    va='center', ha='left', fontsize=18, color='black')
-
-        # Enlever cadre & axes x
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(True)
-        ax.set_yticklabels(categories, fontsize=18)
-        fig.subplots_adjust(right=0.85)
-        fig.suptitle("Statistiques des OFS", fontsize=24, color="#34495e", y=1)
-
-        chart = FigureCanvasKivyAgg(fig)
-        chart.size_hint_y = None
-        chart.height = 350
-        self.ids.bar_chart_container.add_widget(chart)
-
-    def spinner_selected(self,text):
-        print(text)
-        for stat in self.statistics:
-            if stat["modele"] == text:
-                self.bar_chart([stat["nb_waiting"],stat["nb_inProgress"],stat["nb_done"]])
-                break
 
 
 

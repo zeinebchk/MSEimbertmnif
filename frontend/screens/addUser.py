@@ -37,9 +37,6 @@ class AddUserScreen(Screen):
         firstName = self.ids.nom_ouvrier.text.strip()
         lastName = self.ids.prenom_ouvrier.text.strip()
         matricule = self.ids.matricule_ouvrier.text.strip()
-        # if firstName == "" or lastName == "" or matricule == "":
-        #     self.show_popup("attention","veuiller remplir tous les champs")
-        #     return
         if firstName and lastName and matricule:
             try:
                 data = {

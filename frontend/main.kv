@@ -4,14 +4,16 @@
 #:include screens/listUsers.kv
 #:include screens/RoleManagementScreen.kv
 #:include screens/UpdateLaunchScreen.kv
+#:include screens/launchscreen.kv
+#:include screens/dashboard.kv
 ScreenManager:
     id:screen_manager
     LoginScreen:
         name:"login_screen"
         id:login_screen
-    DashboardScreen:
-        name:"dashboard_screen"
-        id:dashboard_screen
+    LaunchScreen:
+        name:"launch_screen"
+        id:launch_screen
     AddUserScreen:
         name:"adduser_screen"
         id:adduser_screen
@@ -24,3 +26,6 @@ ScreenManager:
     UpdateLaunchScreen:
         name:"update_launch_screen"
         id:update_launch_screen
+    DashboardScreen:
+        name:"dashboard_screen"
+        id:dashboard_screen

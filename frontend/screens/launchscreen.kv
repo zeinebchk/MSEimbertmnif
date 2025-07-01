@@ -1,5 +1,6 @@
-<UpdateLaunchScreen>:
+<LaunchScreen>:
     search_input: search_input
+    status_label: status_label
     table_grid: table_grid
     table_scroll: table_scroll
     header_scroll: header_scroll
@@ -38,7 +39,7 @@
                 size_hint_x: 1
                 text_size: self.size
 
-        # --- Corps : Sidebar + Contenu scrollable ---
+        # --- Corps principal : sidebar fixe + contenu scrollable ---
         BoxLayout:
             orientation: 'horizontal'
 
@@ -79,7 +80,7 @@
                     font_size: '16sp'
                     on_release: app.logout()
 
-            # --- Contenu scrollable ---
+            # --- Contenu scrollable à droite ---
             ScrollView:
                 do_scroll_y: True
                 do_scroll_x: False
@@ -92,17 +93,27 @@
                     padding: dp(15)
                     spacing: dp(15)
 
-                    # --- Recherche ---
+                    # --- Formulaire de recherche ---
                     BoxLayout:
+                        opacity: 1 if root.show_table else 0
                         size_hint_y: None
                         height: dp(50)
                         spacing: dp(10)
+
+                        Spinner:
+                            id: column_spinner
+                            text: "Toutes les colonnes"
+                            values: ["Toutes les colonnes", "dateLancement", "numOF", "Modele", "Coloris", "SAIS","Pointure"]
+                            size_hint_x: 0.25
+                            font_size: 16
+                            background_color: 0.95, 0.95, 0.95, 1
+                            color: 0, 0, 0, 1
 
                         TextInput:
                             id: search_input
                             hint_text: '🔍 Rechercher...'
                             font_name: 'EmojiFont'
-                            size_hint_x: 0.5
+                            size_hint_x: 0.4
                             multiline: False
                             font_size: 18
                             foreground_color: 0, 0, 0, 1
@@ -118,10 +129,21 @@
                             size_hint_y: None
                             height: dp(50)
                             background_normal: ''
-                            background_color: 0.7, 0.85, 1, 1
+                            background_color: 0, 0, 0, 0
                             color: 0, 0, 0, 1
                             font_size: '14sp'
                             on_press: root.search()
+                            canvas.before:
+                                Color:
+                                    rgba: 0.7, 0.85, 1, 1
+                                Rectangle:
+                                    pos: self.pos
+                                    size: self.size
+                                Color:
+                                    rgba: 0.5, 0.5, 0.5, 1
+                                Line:
+                                    rectangle: (self.x, self.y, self.width, self.height)
+                                    width: 1
 
                         Button:
                             text: '🔄 Réinitialiser'
@@ -132,11 +154,28 @@
                             color: 0, 0, 0, 1
                             font_size: '14sp'
                             on_press: root.reset_filter()
+                            canvas.before:
+                                Color:
+                                    rgba: 0.5, 0.5, 0.5, 1
+                                Line:
+                                    rectangle: (self.x, self.y, self.width, self.height)
+                                    width: 1
+
+                    Label:
+                        id: status_label
+                        text: ''
+                        font_name: 'EmojiFont'
+                        size_hint_y: None
+                        height: dp(30)
+                        color: 0.2, 0.2, 0.2, 1
+                        font_size: '14sp'
 
                     # --- Tableau ---
                     BoxLayout:
+                        opacity: 1 if root.show_table else 0
                         id: box_table_container
                         orientation: 'vertical'
+                        size_hint_x: 1
                         size_hint_y: None
                         height: self.minimum_height
 
@@ -168,10 +207,11 @@
                                 width: self.minimum_width
                                 cols: 1
 
-                    # --- Sélection de type de chaîne ---
+                    # --- Cases à cocher ---
                     BoxLayout:
-                        id: my_checkbox
+                        opacity: 1 if root.show_table else 0
                         orientation: 'vertical'
+                        id: my_checkbox
                         size_hint_y: None
                         height: self.minimum_height
                         padding: dp(20)
@@ -185,6 +225,12 @@
                             color: 0.2, 0.2, 0.2, 1
                             size_hint_y: None
                             height: dp(50)
+                            canvas.before:
+                                Color:
+                                    rgba: 0.92, 0.92, 0.92, 1
+                                Rectangle:
+                                    pos: self.pos
+                                    size: self.size
 
                         GridLayout:
                             id: type_chaine
@@ -216,3 +262,9 @@
                             background_normal: ''
                             background_color: 1, 0.85, 0.4, 1
                             on_release: root.save_ofs_typechaine()
+                            canvas.before:
+                                Color:
+                                    rgba: 0.7, 0.7, 0.7, 1
+                                Line:
+                                    rectangle: (self.x, self.y, self.width, self.height)
+                                    width: 1

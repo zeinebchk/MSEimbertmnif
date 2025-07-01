@@ -1,5 +1,5 @@
 from flask import Blueprint,jsonify,request
-from schemas import OFSSchema, GetOfsForUpdate,GetOfsByModele
+from schemas import OFSSchema, GetOfsForUpdate, GetOfsByModele, GetofsGroupByidChaineSchema, GetofsByidChaineSchema
 from flask_jwt_extended import jwt_required, get_jwt, current_user
 from models import OFS,OFSChaine
 manage_ofs_bp=Blueprint('manage_ofs', __name__)
@@ -150,3 +150,59 @@ def getofs_byModele():
        "message":"unauthorized"
     },401)
 
+@manage_ofs_bp.get("/getStaticticPerModele")
+@jwt_required()
+def getStaticticPerModele():
+    statistics=[]
+    if current_user.role == "production":
+        prefix = request.get_json().get('numof')
+        modelsList=request.get_json().get('models')
+        for model in modelsList:
+            res_enAttente=OFSChaine.get_waiting_ofs(model,prefix)
+            res_enCours=OFSChaine.get_inProgress_ofs_by_modele(model,prefix)
+            res_done=OFSChaine.get_nb_of_termine_par_modele(model,prefix)
+            stat={
+                "modele":model,
+                "nb_waiting":res_enAttente[0][1] if res_enAttente else 0,
+                "nb_inProgress":res_enCours[0][1] if res_enCours else 0,
+                "nb_done":res_done[0][1] if res_done else 0,
+            }
+            statistics.append(stat)
+            print("res attente:",res_enAttente)
+            print("res en cours:",res_enCours)
+            print("res termine",res_done)
+
+        return jsonify({
+            "statistics":statistics,
+        },200)
+    return jsonify({
+       "message":"unauthorized"
+    },401)
+@manage_ofs_bp.get("/getAllofsGroupbyChainewithStatistic")
+@jwt_required()
+def getAllofsGroupbyChainewithStatistic():
+    statistics=[]
+    if current_user.role == "production":
+        prefix = request.get_json().get('numof')
+        modele=request.get_json().get('modele')
+        res=OFSChaine.get_all_ofchaines_by_modeleAndnumOf(modele,prefix)
+        print(res)
+        resSchema=GetofsGroupByidChaineSchema().dump(res,many=True)
+        for item in resSchema:
+            ofs=OFSChaine.getofsJOINOuvriersby_modele_num_chaine(modele,prefix,item["idChaine"])
+            ofsresult=GetofsByidChaineSchema().dump(ofs,many=True)
+            print(ofs)
+            lot={
+                "idChaine": item["idChaine"],
+                "nb_en_attente": item["nb_en_attente"],
+                "nb_en_cours": item["nb_en_cours"],
+                "nb_termine": item["nb_termine"],
+                "ofs":ofsresult if ofs else []
+            }
+            statistics.append(lot)
+        return jsonify({
+            "statistics":statistics,
+        },200)
+    return jsonify({
+       "message":"unauthorized"
+    },401)
