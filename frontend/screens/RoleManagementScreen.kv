@@ -15,7 +15,7 @@
                     size: self.size
 
             Label:
-                text: "[b]Gestion des Utilisateurs[/b]"
+                text: "[b]Gestion des chaine[/b]"
                 markup: True
                 font_size: 20
                 color: 1, 1, 1, 1
@@ -68,7 +68,7 @@
                     size_hint_y: None
                     height: self.minimum_height
                     padding: 10
-                    spacing: 10
+                    spacing: dp(20)
 
                     BoxLayout:
                         size_hint_y: None
@@ -124,48 +124,488 @@
                             text: "ajouter"
                             on_release: root.addRole()
                         Button:
-                            text: "Modifier"
-                            on_release: root.afficher_detail_user()
+                            text: "supprimer"
+                            on_release: root.supprimer_chaine()
 
-                    # Modifier utilisateur
                     BoxLayout:
                         orientation: 'vertical'
                         size_hint_y: None
-                        height: '200dp'
-                        padding: 10
-                        spacing: 20
-                        opacity: 1 if root.show_modification else 0
-                        canvas:
-                            Color:
-                                rgba: 0.9, 0.9, 0.9, 1
-                            Rectangle:
-                                pos: self.pos
-                                size: self.size
-
+                        height: dp(150)
+                        spacing: dp(10)
                         Label:
-                            text: "Modifier Role"
-                            font_size: 22
-                            bold: True
+                            text: "[b]Configurer l'objectif[/b]"
+                            spacing:dp(10)
+                            markup: True
+                            font_size: 24
                             size_hint_y: None
-                            height: '50dp'
-                            color:0,0,0,1
+                            height: dp(40)
+                            color: 0, 0, 0, 1
+
+                        # Ligne 1 : Label + Spinner pour la chaîne
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            size_hint_y: None
+                            height: dp(40)
+                            spacing: dp(10)
+
+                            Label:
+                                text: "Choisir une chaîne :"
+                                size_hint_x: None
+                                width: dp(150)
+                                font_size: 16
+                                color: 0, 0, 0, 1
+                                font_size: 18
+                            Spinner:
+                                id: chaine_id
+                                text: "Choisir une chaîne"
+                                values: []
+                                size_hint_x: None
+                                width:dp(250)
+                                height: dp(30)
+                                font_size: 18
+                                background_normal: ''
+                                background_color: 1, 1, 1, 1
+                                color: 0, 0, 0, 1
+                                on_text:root.on_chaine_select(self.text)
+                                canvas.before:
+                                    Color:
+                                        rgba: 0.8, 0.8, 0.8, 1
+                                    Line:
+                                        width: 1.2
+                                        rectangle: self.x, self.y, self.width, self.height
+
+                        # Ligne 2 : Label + Spinner pour le modèle
+                        BoxLayout:
+                            orientation: 'horizontal'
+                            size_hint_y: None
+                            height: dp(40)
+                            spacing: dp(10)
+
+                            Label:
+                                text: "Choisir un modèle :"
+                                size_hint_x: None
+                                width: dp(150)
+                                font_size: 18
+                                color: 0, 0, 0, 1
+
+                            Spinner:
+                                id: model_id
+                                text: "Choisir un modèle"
+                                values: ['DCDP500 STRETCH BISQUE','DCDP500 STRETCH NOIR','DCDP900 LEATHER half-point BEI','GAS 580Leather Slippers WHT','GRPD 500F half-point BEI','Half Point Leather Free Chrome','MDW WIYHOUT CHROME']
+                                size_hint_x: None
+                                width:dp(250)
+                                height: dp(30)
+                                font_size: 18
+                                on_text: root.on_model_select(self.text)
+                                background_normal: ''
+                                background_color: 1, 1, 1, 1
+                                color: 0, 0, 0, 1
+                                canvas.before:
+                                    Color:
+                                        rgba: 0.8, 0.8, 0.8, 1
+                                    Line:
+                                        width: 1.2
+                                        rectangle: self.x, self.y, self.width, self.height
+
+                                        # Modifier utilisateur
+                                        BoxLayout:
+                                            orientation: 'vertical'
+                                            size_hint_y: None
+                                            height: '200dp'
+                                            padding: 10
+                                            spacing: 20
+                                            opacity: 1 if root.show_modification else 0
+                                            canvas:
+                                                Color:
+                                                    rgba: 0.9, 0.9, 0.9, 1
+                                                Rectangle:
+                                                    pos: self.pos
+                                                    size: self.size
+
+                    # SECTION : Configurer l'objectif
+                    BoxLayout:
+                        orientation: 'vertical'
+                        size_hint_y: None
+                        height: dp(400)
+                        spacing: dp(10)
+                        padding: [10, 10, 30, 10]
 
                         BoxLayout:
-                            spacing: 10
+                            orientation: 'horizontal'
+                            spacing: dp(40)
                             size_hint_y: None
-                            height: '40dp'
-                            Label:
-                                text: "nouvelle valeur:"
-                                size_hint_x: 0.3
-                                color: 0, 0, 0, 1
-                            TextInput:
-                                id: mod_new_role
-                                multiline: False
-                                text: ""
+                            height: self.minimum_height
+                            padding: [10, 10, 30, 10]
+
+                            # Régime 42H
+                            BoxLayout:
+                                orientation: 'vertical'
+                                size_hint_x: 0.5
+                                spacing: dp(10)
+
+                                Label:
+                                    text: "[b]Régime 42H[/b]"
+                                    markup: True
+                                    font_size: 22
+                                    size_hint_y: None
+                                    height: dp(30)
+                                    color: 0, 0, 0, 1
+
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "jour :"
+                                        size_hint_x: 0.6
+                                        color: 0, 0, 0, 1
+                                        font_size: dp(18)
+                                        opacity: 0
+                                    Label:
+                                        text: "heure/jour :"
+                                        size_hint_x: 0.6
+                                        color: 0, 0, 0, 1
+                                        font_size: dp(18)
+                                    Label:
+                                        text: "paires/jour :"
+                                        size_hint_x: 0.6
+                                        color: 0, 0, 0, 1
+                                        font_size: dp(18)
+
+                                # Boucle jours semaine
+                                # Lundi à samedi pour régime 42H (heures: 7)
+                                # Lundi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Lundi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_lundi_42
+                                        text: "7"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_lundi_42
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                                # Mardi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Mardi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_mardi_42
+                                        text: "7"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_mardi_42
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                                # Mercredi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Mercredi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_mercredi_42
+                                        text: "7"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_mercredi_42
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                                # Jeudi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Jeudi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_jeudi_42
+                                        text: "7"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_jeudi_42
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                                # Vendredi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Vendredi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_vendredi_42
+                                        text: "7"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_vendredi_42
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                                # Samedi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Samedi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_samedi_42
+                                        text: "7"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_samedi_42
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                            # Régime 48H
+                            BoxLayout:
+                                orientation: 'vertical'
+                                size_hint_x: 0.5
+                                spacing: dp(10)
+
+                                Label:
+                                    text: "[b]Régime 48H[/b]"
+                                    markup: True
+                                    font_size: 22
+                                    size_hint_y: None
+                                    height: dp(30)
+                                    color: 0, 0, 0, 1
+
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "jour :"
+                                        size_hint_x: 0.6
+                                        color: 0, 0, 0, 1
+                                        font_size: dp(18)
+                                        opacity: 0
+                                    Label:
+                                        text: "heure/jour :"
+                                        size_hint_x: 0.6
+                                        color: 0, 0, 0, 1
+                                        font_size: dp(18)
+                                    Label:
+                                        text: "paires/jour :"
+                                        size_hint_x: 0.6
+                                        color: 0, 0, 0, 1
+                                        font_size: dp(18)
+
+                                # Jours avec heures 48H
+                                # Lundi à vendredi : 8.5
+                                # Samedi : 5.5
+
+                                # Lundi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Lundi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_lundi_48
+                                        text: "8.5"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_lundi_48
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                                # Mardi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Mardi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_mardi_48
+                                        text: "8.5"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_mardi_48
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                                # Mercredi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Mercredi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_mercredi_48
+                                        text: "8.5"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_mercredi_48
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                                # Jeudi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Jeudi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_jeudi_48
+                                        text: "8.5"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_jeudi_48
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                                # Vendredi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Vendredi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_vendredi_48
+                                        text: "8.5"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_vendredi_48
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
+
+                                # Samedi
+                                BoxLayout:
+                                    orientation: 'horizontal'
+                                    spacing: dp(5)
+                                    size_hint_y: None
+                                    height: dp(35)
+                                    Label:
+                                        text: "Samedi :"
+                                        size_hint_x: 0.4
+                                        color: 0, 0, 0, 1
+                                    TextInput:
+                                        id: input_heure_samedi_48
+                                        text: "5.5"
+                                        multiline: False
+                                        input_filter: 'float'
+                                        size_hint_x: None
+                                        width: dp(170)
+                                    TextInput:
+                                        id: input_samedi_48
+                                        multiline: False
+                                        input_filter: 'int'
+                                        size_hint_x: None
+                                        width: dp(170)
 
                         Button:
-                            text: "Valider Modification"
-                            size_hint_y: None
-                            height: '40dp'
-                            background_color: 0.2, 0.6, 0.8, 1
-                            on_release: root.updateUser()
+                            text: "Enregistrer"
+                            size_hint: None, None
+                            size: dp(120), dp(40)
+                            pos_hint: {"center_x": 0.5}
+                            on_release:root.enregistrer()

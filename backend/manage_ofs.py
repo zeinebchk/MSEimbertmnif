@@ -1,7 +1,9 @@
 from flask import Blueprint,jsonify,request
-from schemas import OFSSchema, GetOfsForUpdate, GetOfsByModele, GetofsGroupByidChaineSchema, GetofsByidChaineSchema
+from schemas import OFSSchema, GetOfsForUpdate, GetOfsByModele, GetofsGroupByidChaineSchema, GetofsByidChaineSchema, \
+    get_all_ofs_by_modelesSchema, ModelesSchema
 from flask_jwt_extended import jwt_required, get_jwt, current_user
-from models import OFS,OFSChaine
+from models import OFS, OFSChaine, CodeModeles
+
 manage_ofs_bp=Blueprint('manage_ofs', __name__)
 
 
@@ -157,6 +159,7 @@ def getStaticticPerModele():
     if current_user.role == "production":
         prefix = request.get_json().get('numof')
         modelsList=request.get_json().get('models')
+        print(prefix)
         for model in modelsList:
             res_enAttente=OFSChaine.get_waiting_ofs(model,prefix)
             res_enCours=OFSChaine.get_inProgress_ofs_by_modele(model,prefix)
@@ -206,3 +209,38 @@ def getAllofsGroupbyChainewithStatistic():
     return jsonify({
        "message":"unauthorized"
     },401)
+@manage_ofs_bp.get("/get_maximum_date_of_ofs")
+@jwt_required()
+def get_maximum_date_of_ofs():
+    max=OFS.get_maximum_date_of_ofs()
+    return jsonify({
+        "maxNumberOfOfOfs": max,
+    },200)
+@manage_ofs_bp.get("/get_all_ofs_by_modele")
+@jwt_required()
+def get_all_ofs_by_modele():
+    if current_user.role == "production":
+        modele = request.get_json().get('modele')
+        ofsbyModeles=OFS.get_all_ofs_by_modele(modele)
+        ofsbyModelesWithSchema=get_all_ofs_by_modelesSchema().dump(ofsbyModeles,many=True)
+        print(ofsbyModeles)
+        return jsonify({
+            "ofsbyModeles":ofsbyModelesWithSchema
+        },200)
+
+
+@manage_ofs_bp.put("/update_of")
+@jwt_required()
+def update_of():
+    if current_user.role == "production":
+        data=request.get_json()
+        of=OFS.get_of_by_numOF(data.get("numof"))
+        data.pop("numof", None)
+
+        # Appel de la méthode d'instance pour mettre à jour
+        of.update_of(data)
+        return jsonify({"message": "ofs_chaines added successfully"}, 200)
+    else:
+        return jsonify({"message": "Vous n'etes pas autorisé pour cette focntion"}, 401)
+
+

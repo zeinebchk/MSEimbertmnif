@@ -68,3 +68,55 @@ class GetofsByidChaineSchema(Schema):
     dateFin=fields.Date()
     etat=fields.String()
     ouvriers=fields.String()
+    Quantite=fields.Integer()
+    Pointure=fields.Integer()
+    SAIS=fields.String()
+    dateCreation=fields.Date()
+class get_all_ofs_by_modelesSchema(Schema):
+    __tablename__ = 'ofs'
+    numOF = fields.Integer()
+    Modele = fields.String()
+    Quantite = fields.Integer()
+    Pointure = fields.String()
+    Coloris = fields.String()
+    observation = fields.String()
+    inventaire = fields.String()
+    magasin = fields.String()
+    nbre = fields.Integer()
+    colisNonEmb = fields.Integer()
+    DF = fields.Date()
+    export=fields.String()
+    dateCreation=fields.Date()
+    # Coupe
+    entre_Coupe = fields.Date(allow_none=True)
+    sortie_Coupe = fields.Date(allow_none=True)
+
+    # Piqure
+    atelierPiqure = fields.String(allow_none=True)
+    entre_Piqure = fields.Date(allow_none=True)
+    sortie_Piqure = fields.Date(allow_none=True)
+
+    # Montage
+    entre_Montage = fields.Date(allow_none=True)
+    sortie_Montage = fields.Date(allow_none=True)
+class ModelesSchema(Schema):
+    __tablename__ = 'code_modeles'
+    nom_modele=fields.String()
+class PlanificationSchema(Schema):
+    __tablename__ = 'planifications'
+    id =fields.Integer()
+    modele = fields.String()
+    chaine = fields.String()
+    regimeHoraire = fields.Integer()
+    horaireLundi = fields.Float()
+    nbPaireLundi = fields.Integer()
+    horaireMardi = fields.Float()
+    nbPaireMardi = fields.Integer()
+    horaireMercredi = fields.Float()
+    nbPaireMercredi = fields.Integer()
+    horaireJeudi = fields.Float()
+    nbPaireJeudi = fields.Integer()
+    horaireVendredi = fields.Float()
+    nbPaireVendredi = fields.Integer()
+    horaireSamedi = fields.Float()
+    nbPaireSamedi = fields.Integer()

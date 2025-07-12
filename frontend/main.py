@@ -4,11 +4,12 @@ from kivy.app import App
 from kivy.core.window import Window
 from screens.listUser import ListUserScreen
 from screens.login import LoginScreen
-from screens.dashboard import DashboardScreen
-from screens.addUser import AddUserScreen
 from screens.RoleManagementScreen import RoleManagementScreen
 from screens.UpdateLaunchScreen import UpdateLaunchScreen
 from screens.LaunchScreen import LaunchScreen
+from screens.OfsEnCoursScreen import OfsEnCoursScreen
+from screens.addUser import AddUserScreen
+from screens.dashboard import DashboardScreen
 from frontend.SessionManager import SessionManager
 emoji_font_path = r"D:\seguiemj.ttf"
 LabelBase.register(name='EmojiFont', fn_regular=emoji_font_path)
@@ -38,6 +39,7 @@ class MyApp(App):
         self.root.current = "launch_screen"
     def root_to_dashboardProduction(self):
         self.root.current = "dashboard_screen"
-
+    def root_to_ofs_encours(self):
+        self.root.current = "ofs_encours_screen"
 if __name__ == '__main__':
     MyApp().run()

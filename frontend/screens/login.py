@@ -52,7 +52,7 @@ class LoginScreen(Screen):
                     data = response.json()[0]
                     session.set_tokens(data.get("access_token"),data.get("refresh_token"))
                     if data.get("role")=="production":
-                        self.manager.current = "dashboard_screen"
+                        self.manager.current = "launch_screen"
                     elif data.get("role")=="userManager":
                         self.manager.current = "list_users_screen"
                     elif data.get("role") == "Technicien picure2 🛠":

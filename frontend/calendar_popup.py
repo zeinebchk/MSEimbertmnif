@@ -1,15 +1,13 @@
-from kivy.app import App
-from kivy.uix.popup import Popup
+import calendar
+from datetime import date
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.button import Button
 from kivy.uix.label import Label
 from kivy.uix.spinner import Spinner
-import calendar
-from datetime import date
+from kivy.uix.popup import Popup
 
-
-class CompactCalendar(BoxLayout):
+class SimpleCalendarPopup(BoxLayout):
     def __init__(self, on_date_select, **kwargs):
         super().__init__(orientation='vertical', spacing=5, **kwargs)
         self.on_date_select = on_date_select
@@ -18,9 +16,7 @@ class CompactCalendar(BoxLayout):
         self.year = today.year
         self.month = today.month
 
-        # Header : navigation année/mois
         nav = BoxLayout(size_hint_y=None, height=40, spacing=5)
-
         self.prev_month_btn = Button(text='<', size_hint_x=None, width=40)
         self.prev_month_btn.bind(on_release=self.prev_month)
         nav.add_widget(self.prev_month_btn)
@@ -42,13 +38,11 @@ class CompactCalendar(BoxLayout):
 
         self.add_widget(nav)
 
-        # Jours de la semaine
         weekdays = GridLayout(cols=7, size_hint_y=None, height=30)
         for day in ['L', 'M', 'M', 'J', 'V', 'S', 'D']:
             weekdays.add_widget(Label(text=day))
         self.add_widget(weekdays)
 
-        # Grille des jours
         self.days_grid = GridLayout(cols=7, spacing=2)
         self.add_widget(self.days_grid)
 
@@ -58,15 +52,11 @@ class CompactCalendar(BoxLayout):
         self.month_label.text = calendar.month_name[self.month]
         self.days_grid.clear_widgets()
 
-        # Premier jour de la semaine (lundi=0 ou dimanche=6)
         first_weekday, num_days = calendar.monthrange(self.year, self.month)
-        # Kivy calendar starts with Monday, calendar module Monday=0 so c’est cohérent
 
-        # Ajouter des cases vides pour décaler le premier jour
         for _ in range(first_weekday):
             self.days_grid.add_widget(Label(text=''))
 
-        # Ajouter les boutons des jours
         for day in range(1, num_days + 1):
             btn = Button(text=str(day), size_hint_y=None, height=40)
             btn.bind(on_release=self.select_day)
@@ -103,11 +93,10 @@ class CalendarPopup(Popup):
         super().__init__(title="Choisir une date", size_hint=(None, None), size=(350, 400), **kwargs)
         self.auto_dismiss = False
 
-        self.calendar = CompactCalendar(self.on_date_selected)
+        self.calendar = SimpleCalendarPopup(self.on_date_selected)
         self.add_widget(self.calendar)
         self._external_callback = on_date_select
 
-        # Bouton fermer
         btn_close = Button(text="Fermer", size_hint_y=None, height=40)
         btn_close.bind(on_release=self.dismiss)
         self.calendar.add_widget(btn_close)
@@ -115,30 +104,3 @@ class CalendarPopup(Popup):
     def on_date_selected(self, date_str):
         self._external_callback(date_str)
         self.dismiss()
-
-
-class TestApp(App):
-    def build(self):
-        from kivy.uix.boxlayout import BoxLayout
-        from kivy.uix.textinput import TextInput
-        from kivy.uix.button import Button
-
-        root = BoxLayout(orientation='horizontal', spacing=5, padding=10)
-        self.date_input = TextInput(hint_text="Date (YYYY-MM-DD)", readonly=True)
-        root.add_widget(self.date_input)
-
-        btn = Button(text="📅", size_hint_x=None, width=40)
-        btn.bind(on_release=self.open_calendar)
-        root.add_widget(btn)
-        return root
-
-    def open_calendar(self, *args):
-        popup = CalendarPopup(self.set_date)
-        popup.open()
-
-    def set_date(self, date_str):
-        self.date_input.text = date_str
-
-
-if __name__ == '__main__':
-    TestApp().run()

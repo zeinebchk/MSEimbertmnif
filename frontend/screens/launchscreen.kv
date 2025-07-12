@@ -73,7 +73,11 @@
                     font_name: 'EmojiFont'
                     font_size: '16sp'
                     on_release: app.root_to_dashboardProduction()
-
+                Button:
+                    text: "En cours"
+                    font_name: 'EmojiFont'
+                    font_size: '16sp'
+                    on_release: app.root_to_ofs_encours()
                 Button:
                     text: "Déconnexion"
                     font_name: 'EmojiFont'
@@ -206,7 +210,14 @@
                                 size_hint_x: None
                                 width: self.minimum_width
                                 cols: 1
-
+                    Label:
+                        id: qte_total_label
+                        text: ''
+                        font_name: 'EmojiFont'
+                        size_hint_y: None
+                        height: dp(30)
+                        color: 0.2, 0.2, 0.2, 1
+                        font_size: '16sp'
                     # --- Cases à cocher ---
                     BoxLayout:
                         opacity: 1 if root.show_table else 0
@@ -239,8 +250,7 @@
                             height: self.minimum_height
                             spacing: dp(30)
                             padding: dp(30)
-                            row_default_height: dp(40)
-                            row_force_default: True
+
                             canvas.before:
                                 Color:
                                     rgba: 0.98, 0.98, 0.98, 1

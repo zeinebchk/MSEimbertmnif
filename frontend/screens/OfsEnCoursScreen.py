@@ -1,5 +1,6 @@
 from datetime import datetime
 
+from kivy.app import App
 from kivy.atlas import CoreImage
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.screenmanager import Screen
@@ -10,9 +11,14 @@ from kivy.uix.button import Button
 from kivy.uix.image import Image
 from kivy.core.image import Image as CoreImage
 import io
+from kivy.uix.popup import Popup
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.button import Button
+from frontend.calendar_popup import SimpleCalendarPopup, CalendarPopup
 
 from kivy.uix.scrollview import ScrollView
 from kivy.uix.spinner import Spinner
+from kivy.uix.textinput import TextInput
 from kivy.uix.widget import Widget
 from kivy_garden.matplotlib.backend_kivyagg import FigureCanvasKivyAgg
 import matplotlib.pyplot as plt
@@ -23,7 +29,7 @@ from matplotlib.backends.backend_agg import FigureCanvasAgg
 from frontend.Client import make_request
 
 
-class DashboardScreen(Screen):
+class OfsEnCoursScreen(Screen):
 
     show_table= BooleanProperty(False)
     search_input = ObjectProperty()
@@ -32,7 +38,7 @@ class DashboardScreen(Screen):
     table_scroll = ObjectProperty()
     header_scroll = ObjectProperty()
     show_statistics=BooleanProperty(False)
-
+    show_modification_section=BooleanProperty(False)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.of_chaines = []
@@ -42,7 +48,11 @@ class DashboardScreen(Screen):
         self.statistics=[]
         self.ofsPerChaine=[]
         self.search_text=""
-
+        self.numOFselectionne=0
+        self.filter_inputs = {}  # Pour stocker les champs de recherche
+        self.original_df = []  # Pour conserver les données non filtrées
+        self.selected_rows=[]
+        self.modeleforFiltered=""
 
     def get_maximum_date_of_ofs(self):
         response = make_request("get", "/manage_ofs/get_maximum_date_of_ofs")
@@ -54,25 +64,32 @@ class DashboardScreen(Screen):
             self.table_scroll.bind(scroll_x=self.header_scroll.setter('scroll_x'))
             self.header_scroll.bind(scroll_x=self.table_scroll.setter('scroll_x'))
 
-    def loadofs(self):
-        data={
-            "numof": self.search_text
+    def loadofs(self, modele):
+        self.df=[]
+        self.original_df=[]
+        data = {
+            "modele": modele
         }
-        response = make_request("get", "/manage_ofs/getofs_byModele",json=data)
+        response = make_request("get", "/manage_ofs/get_all_ofs_by_modele", json=data)
         if response.status_code == 200:
-            self.df = response.json()[0].get("ofs", [])
-            print(self.df)
-            self.populate_table()# Extraire la liste des OFs
+            self.original_df = response.json()[0].get("ofsbyModeles", [])  # Stocker les données originales
+            self.df = self.original_df.copy()
+            self.original_df = self.df.copy()# Copie pour le filtrage
+            print(self.original_df)
+            self.populate_table()
         if not self.df:
             return
+
     def populate_table(self):
         self.table_grid.clear_widgets()
         self.ids.header_grid.clear_widgets()
-        print( "populaaaaaate")
-
+        print("populaaaaaate")
 
         # Ordre explicite des colonnes
-        columns = [ "Modele","total_quantite","Coloris","SAIS","dateCreation", "total_ofs"  ]
+        columns = ["inventaire", "atelierPiqure", "Modele", "Coloris", "DF", "numOF", "dateCreation",
+                   "Quantite", "Pointure", "entre_Coupe", "sortie_Coupe",
+                   "entre_Piqure", "sortie_Piqure", "entre_Montage", "sortie_Montage",
+                   "export", "magasin", "nbre", "colisNonEmb", "observation"]
         n_cols = len(columns)
         row_height = dp(40)
 
@@ -80,21 +97,25 @@ class DashboardScreen(Screen):
         col_widths = [dp(120)] * n_cols
         total_width = sum(col_widths)
 
-        # En-têtes
+        # En-têtes avec champs de recherche
         header_layout = self.ids.header_grid
         header_layout.cols = n_cols
         header_layout.width = total_width
         header_layout.size_hint_x = None
         header_layout.clear_widgets()
 
+        self.filter_inputs = {}  # Dictionnaire pour stocker les champs de recherche
+
         for i, col in enumerate(columns):
+            # Créer un BoxLayout vertical pour chaque colonne (titre + champ de recherche)
+            col_box = BoxLayout(orientation='vertical', size_hint_x=None, width=col_widths[i])
+
+            # Titre de la colonne
             header = Label(
                 text=str(col),
-                size_hint_x=None,
-                width=col_widths[i],
                 size_hint_y=None,
-                height=row_height,
-                font_size='14sp',
+                height=row_height / 2,
+                font_size='12sp',
                 bold=True,
                 color=(0, 0, 0, 1),
                 halign='center',
@@ -102,68 +123,76 @@ class DashboardScreen(Screen):
                 padding=(dp(5), dp(5)),
             )
             header.bind(size=header.setter('text_size'))
-            header_layout.add_widget(header)
+
+            # Champ de recherche
+            filter_input = TextInput(
+                hint_text=f"Filtrer {col}",
+                size_hint_y=None,
+                height=row_height / 2,
+                font_size='10sp',
+                multiline=False
+            )
+            filter_input.bind(text=self.on_filter_change)
+
+            col_box.add_widget(header)
+            col_box.add_widget(filter_input)
+            header_layout.add_widget(col_box)
+
+            self.filter_inputs[col] = filter_input  # Stocker la référence
+
+        # Stocker les données originales pour le filtrage
+        self.original_df = self.df.copy()
 
         # Lignes du tableau
+        self.update_table_rows()
+
+    def on_filter_change(self, instance, value):
+        filtered_data = self.original_df.copy()
+
+        # Appliquer tous les filtres
+        for col, input_widget in self.filter_inputs.items():
+            filter_text = input_widget.text.lower()
+            if filter_text:
+                filtered_data = [row for row in filtered_data
+                                 if filter_text in str(row.get(col, "")).lower()]
+
+        self.df = filtered_data
+        self.update_table_rows()
+
+    def update_table_rows(self):
+        self.table_grid.clear_widgets()
+
+        columns = list(self.filter_inputs.keys())
+        n_cols = len(columns)
+        row_height = dp(40)
+        col_widths = [dp(120)] * n_cols
         max_height = dp(400)
-        #self.table_grid.cols = n_cols
-        self.table_grid.width = total_width
+
+        self.table_grid.cols = 1  # chaque ligne = 1 SelectableRow (horizontal layout)
         self.table_grid.size_hint_x = None
         self.table_grid.size_hint_y = None
+        self.table_grid.width = sum(col_widths)
         content_height = row_height * len(self.df)
         self.table_grid.height = min(content_height, max_height)
-        self.ids.box_table_container.height = dp(40) + self.table_grid.height
+        self.ids.box_table_container.height = dp(120) + self.table_grid.height
+
+        self.rows = []  # liste des SelectableRow ajoutées
+
         for row in self.df:
             row_data = []
             for col in columns:
                 value = row.get(col, "")
-                if col == "dateLancement" and isinstance(value, str):
-                    value = value.split("T")[0]  # enlever l'heure si présente
-                row_data.append(str(value))  # toujours convertir en string
+                if col == "dateCreation" and isinstance(value, str):
+                    value = value.split("T")[0]
+                row_data.append(str(value))
 
-            # Créer une ligne sélectionnable
-            row_widget = SelectableRow(row_data, col_widths,on_selection_change=self.on_row_selection_changed)
+            # Crée une ligne sélectionnable avec tous les champs en Label
+            row_widget = SelectableRow(row_data, col_widths, screen=self,
+                                       on_selection_change=self.on_row_selection_changed)
             self.table_grid.add_widget(row_widget)
+            self.rows.append(row_widget)
 
-    def search(self):
-        self.show_statistics = False
-        self.models=[]
-        self.statistics=[]
-        self.ofsPerChaine=[]
-        self.ids.model_id.text = "Choisir un modele"
-        year=self.ids.year_id.text
-        week=self.ids.week_id.text
-        last_digit_year = year[-1]
-        self.search_text =int(f"{last_digit_year}{week}")
-        print(str(self.search_text))
-        print(len(str(self.search_text)))
 
-        if len(str(self.search_text)) ==3:
-            data = {
-                "numof": self.search_text
-            }
-            response = make_request("get", "/manage_ofs/getofs_byModele", json=data)
-            if response.status_code == 200:
-                self.show_table=True
-                self.df = response.json()[0].get("ofs", [])
-                if self.df:
-                    self.show_table=True
-                    for model in self.df:
-                        self.models.append((model["Modele"]))
-                        self.models=list(set(self.models))
-                    self.ids.model_id.values=self.models
-                    print(self.df)
-                    self.loadStatistics()
-                    self.populate_table()
-                else:
-                    self.show_popup("Erreur", "Vous n'avez pas des modeles lancé dans cette date")
-                    return
-                    # Extraire la liste des OFs
-            if not self.df:
-                return
-        else:
-            self.show_popup("Attention","veuillez choisir un numero valide" )
-            return
     def show_popup(self, title, message):
         popup = Popup(
             title=title,
@@ -212,36 +241,82 @@ class DashboardScreen(Screen):
         popup.content = content
         popup.open()
     def on_enter(self):
-        annee_actuelle = datetime.now().year
+        self.show_table=True
+        self.ids.numOF_input.text=""
+        self.numOFselectionne=0
+        self.show_modification_section=False
+        self.loadofs("DCDP500 STRETCH BISQUE")
+        self.ids.inventaire_input.text=""
+        self.ids.export_input.text=""
+        self.ids.magasin_input.text=""
+        self.ids.nbre_input.text=""
+        self.ids.df_input.text=""
+        self.ids.observation_input.text=""
+    def afficherTextFields(self):
+        self.show_modification_section=True
+        self.ids.numOF_input.text=self.numOFselectionne
+        self.ids.inventaire_input.text = self.selected_rows[0]
+        self.ids.export_input.text = self.selected_rows[15]
+        self.ids.magasin_input.text = self.selected_rows[16]
+        self.ids.nbre_input.text = self.selected_rows[17]
+        self.ids.df_input.text = self.selected_rows[4]
+        self.ids.observation_input.text = self.selected_rows[19]
 
-        self.show_table=False
-        self.show_statistics=False
-        self.ids.year_id.values=[str(i) for i in range(2025,annee_actuelle+11)]
-        self.ids.week_id.values=[f"{i:02}" for i in range(1, 53)]
-        self.get_maximum_date_of_ofs()
-        if self.maxnumOfs!=None:
-            str_num = str(self.maxnumOfs)
-            num_week=str_num[1:3]
-            print("num weeeeek",num_week)
-            anne_extract=str(annee_actuelle)[:3]
+    def open_calendar(self):
+        def set_date(date_str):
+            self.ids.df_input.text = date_str
 
-            self.ids.year_id.text=f"{anne_extract}{str_num[0]}"
-            self.ids.week_id.text=num_week
-            self.search()
+        popup = CalendarPopup(on_date_select=set_date)
+        popup.open()
 
 
+    def est_entier(self,valeur):
+        try:
+            int(valeur)
+            return True
+        except ValueError:
+            return False
+    def valider_modifications(self):
+        nbre=self.ids.nbre_input.text
+        if nbre!="" and not self.est_entier(nbre):
+            self.show_popup("attention","ecrire un nombre valide")
+            return
+        data={
+            "numof": self.numOFselectionne,
+            "inventaire":self.ids.inventaire_input.text,
+            "export":self.ids.export_input.text,
+            "magasin":self.ids.magasin_input.text,
+            "nbre":self.ids.nbre_input.text,
+            "DF":self.ids.df_input.text,
+            "observation":self.ids.observation_input.text,
+        }
+        response = make_request("put", "/manage_ofs/update_of", json=data)
+        if response.status_code == 200:
+            self.show_popup("Succées","l'of a été mise à jour ")
+            self.loadofs("DCDP500 STRETCH BISQUE")
+            self.show_modification_section=False
+            self.numOFselectionne=0
+            self.ids.numOF_input.text=""
+        else:
+            self.show_popup("Attention","Vous n'etes pas autorisé pour cette fonction")
+            return
 
 
     def get_selected_rows(self):
-        selected = []
+        selected = {}
         for child in self.ids.table_grid.children:
             if isinstance(child, SelectableRow) and child.is_selected():
-                selected.append(child.row_data)
+                selected=child.row_data
         return selected
 
     def on_row_selection_changed(self):
-        selected_rows = self.get_selected_rows()
-        print("Lignes sélectionnées :", selected_rows)
+        print("ligne")
+        self.selected_rows = self.get_selected_rows()
+
+        print("Lignes sélectionnées :", self.selected_rows)
+        self.numOFselectionne=self.selected_rows[5]
+        print(self.numOFselectionne)
+
 
     def loadStatistics(self):
         self.statistics=[]
@@ -254,63 +329,11 @@ class DashboardScreen(Screen):
             self.statistics = response.json()[0].get("statistics", [])
             self.afficher_pie_chart(self.statistics)
 
-    def afficher_pie_chart(self, data):
-        self.ids.pie_chart_container.clear_widgets()
-        for item in data:
-            modele = item["modele"]
-            values = [item["nb_done"], item["nb_inProgress"], item["nb_waiting"]]
-            labels = ["Terminés", "En cours", "En attente"]
-            colors = ["#2ecc71", "#f1c40f", "#e74c3c"]
-            explode = (0.1, 0, 0)
-            fig, ax = plt.subplots(figsize=(5, 5))
-            fig.patch.set_alpha(0)  # fond transparent de la figure
-            ax.patch.set_alpha(0)
-            ax.pie(values, labels=labels,textprops={'fontsize': 14} , autopct='%1.1f%%', colors=colors, startangle=90, explode=explode, shadow=True)
-            ax.set_title(modele, fontsize=20,color="#34495e")
-            chart = FigureCanvasKivyAgg(fig)
-            chart.size_hint_x = None
-            chart.width = 450
-            self.ids.pie_chart_container.add_widget(chart)
-
-    def bar_chart(self, values):
-        self.ids.bar_chart_container.clear_widgets()
-        categories = ['En attente', 'En cours', 'Terminé']
-        colors=["#e9c46a","#2a9d8f","#264653"]
-        fig, ax = plt.subplots(figsize=(7,6))
-        fig.patch.set_alpha(0)  # fond transparent figure
-        ax.patch.set_alpha(0)  # fond transparent axes
-
-        bars = ax.barh(categories, values, color=colors)
-
-        # Ajouter valeur devant chaque barre
-        for bar in bars:
-            width = bar.get_width()
-            ax.text(width + 0.3, bar.get_y() + bar.get_height() / 2, str(int(width)),
-                    va='center', ha='left', fontsize=18, color='black')
-
-        # Enlever cadre & axes x
-        for spine in ax.spines.values():
-            spine.set_visible(False)
-        ax.get_xaxis().set_visible(False)
-        ax.get_yaxis().set_visible(True)
-        ax.set_yticklabels(categories, fontsize=18)
-        fig.subplots_adjust(right=0.85)
-        fig.suptitle("Statistiques des OFS", fontsize=24, color="#34495e", y=1)
-
-        chart = FigureCanvasKivyAgg(fig)
-        chart.size_hint_y = None
-        chart.height = 350
-        self.ids.bar_chart_container.add_widget(chart)
-
     def spinner_selected(self,text):
         print(text)
+        self.modeleforFiltered=text
+        self.loadofs(text)
 
-        for stat in self.statistics:
-            if stat["modele"] == text:
-                self.show_statistics = True
-                self.bar_chart([stat["nb_waiting"],stat["nb_inProgress"],stat["nb_done"]])
-                self.loadofsPerModeleAndPerChaine(text)
-                break
     def loadofsPerModeleAndPerChaine(self, modele):
         self.ofsPerChaine=[]
         data = {
@@ -320,7 +343,7 @@ class DashboardScreen(Screen):
         response = make_request("get", "/manage_ofs/getAllofsGroupbyChainewithStatistic", json=data)
         if response.status_code == 200:
             self.ofsPerChaine = response.json()[0].get("statistics",[])
-            self.populate_table_ofs_and_chart(self.ofsPerChaine)
+
              # Extraire la liste des OFs
 
 
@@ -521,6 +544,25 @@ class DashboardScreen(Screen):
                 label.bind(size=partial(self.update_rect_size, rect))
                 tableau.add_widget(label)
 
+    def deselect_all_rows_except(self, selected_row):
+        for row in self.table_grid.children:
+            if isinstance(row, SelectableRow) and row != selected_row:
+                row.deselect()
+
+    def reinitialiser_formulaire(self):
+        self.loadofs(self.modeleforFiltered)
+        self.show_table = True
+        self.ids.numOF_input.text = ""
+        self.numOFselectionne = 0
+        self.show_modification_section = False
+        self.loadofs("DCDP500 STRETCH BISQUE")
+        self.ids.inventaire_input.text = ""
+        self.ids.export_input.text = ""
+        self.ids.magasin_input.text = ""
+        self.ids.nbre_input.text = ""
+        self.ids.df_input.text = ""
+        self.ids.observation_input.text = ""
+
 
 
 from kivy.uix.boxlayout import BoxLayout
@@ -530,8 +572,10 @@ from kivy.metrics import dp
 
 
 class SelectableRow(BoxLayout):
-    def __init__(self, row_data, col_widths,on_selection_change=None, **kwargs):
+    def __init__(self, row_data, col_widths, screen=None, on_selection_change=None, **kwargs):
+
         super().__init__(**kwargs)
+        self.screen = screen
         self.orientation = 'horizontal'
         self.size_hint_y = None
         self.height = dp(40)
@@ -570,13 +614,20 @@ class SelectableRow(BoxLayout):
 
     def on_touch_down(self, touch):
         if self.collide_point(*touch.pos):
-            self.selected = not self.selected
-            self.bg_color.rgba = (0.6, 0.8, 1, 1) if self.selected else (1, 1, 1, 1)
-            if self.on_selection_change:
-                self.on_selection_change()
+            if not self.selected:
+                self.selected = True
+                self.bg_color.rgba = (0.6, 0.8, 1, 1)  # Bleu clair
+
+                if self.screen:
+                    self.screen.deselect_all_rows_except(self)
+                if self.on_selection_change:
+                    self.on_selection_change()
             return True
         return super().on_touch_down(touch)
 
     def is_selected(self):
         return self.selected
 
+    def deselect(self):
+        self.selected = False
+        self.bg_color.rgba = (1, 1, 1, 1)

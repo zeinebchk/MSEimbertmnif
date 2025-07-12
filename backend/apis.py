@@ -18,6 +18,12 @@ app.config.from_prefixed_env()
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+#second ebase de donnes pour recuperer les modeles
+app.config['SQLALCHEMY_BINDS'] = {
+    'db2': 'mysql+pymysql://omar:1234@192.168.1.225/gammes'  # base secondaire
+}
+
 print("DATABASE_URL =", os.getenv('DATABASE_URL'))
 db.init_app(app)
 jwt.init_app(app)

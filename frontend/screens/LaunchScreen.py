@@ -1,5 +1,8 @@
+import math
+
 import numpy as np
 from kivy.app import App
+from kivy.clock import Clock
 from kivy.lang import Builder
 from kivy.uix.checkbox import CheckBox
 from kivy.uix.screenmanager import Screen
@@ -13,7 +16,9 @@ from kivy.core.window import Window
 from kivy.graphics import Color, Line
 import pandas as pd
 import os
-
+from kivy.animation import Animation
+from kivy.uix.spinner import Spinner
+from kivy.uix.textinput import TextInput
 from sqlalchemy import Selectable
 
 from frontend.Client import make_request
@@ -34,21 +39,27 @@ class LaunchScreen(Screen):
         self.of_chaines = []
         self.df = []
         self.selected_rows = []
-        self.checks = ['coupe']
+        self.checks = []
         self.checksChainePicure=[]
-
+        self.qte_total=0
     def on_parent(self, *args):
         # Synchronize horizontal scrolling between header_scroll and table_scroll
         if hasattr(self, 'table_scroll') and hasattr(self, 'header_scroll'):
             self.table_scroll.bind(scroll_x=self.header_scroll.setter('scroll_x'))
             self.header_scroll.bind(scroll_x=self.table_scroll.setter('scroll_x'))
 
+    def calcul_qte_total(self,data):
+        self.qte_total=0
+        for i in data:
+            self.qte_total += i["Quantite"]
+        self.ids.qte_total_label.text=str(self.qte_total)+" paires au total"
+
     def loadofs(self):
         response = make_request("get", "/manage_ofs/getAllLatestOfs")
         if response.status_code == 200:
-            print("aaaaaaaaaaaaaaaaaaaaaaaa")
             self.df = response.json()[0].get("ofs", [])
             print(self.df)
+            self.calcul_qte_total(self.df)
             self.populate_table()# Extraire la liste des OFs
         if not self.df:
             return
@@ -113,6 +124,8 @@ class LaunchScreen(Screen):
             self.table_grid.add_widget(row_widget)
 
     def search(self):
+        grid_checkbox = self.ids.type_chaine
+        grid_checkbox.clear_widgets()
         search_text = self.ids.search_input.text.lower()
         selected_column = self.ids.column_spinner.text
 
@@ -121,11 +134,19 @@ class LaunchScreen(Screen):
                 item for item in self.df
                 if str(item.get(selected_column, "")).lower().startswith(search_text)
             ]
+            self.calcul_qte_total(self.df)
+
             self.populate_table()
             self.ids.search_input.text = ""
             self.status_label.text = f"{len(self.df)} lignes affichées après filtrage"
             self.status_label.color = (0.05, 0.4, 0.75, 1)
             print("filtered data:", self.df)
+            roles = self.loadType_chaine()
+
+            for role in roles:
+                # Container principal pour chaque ligne
+                widget = self.build_role_widget(role)
+                grid_checkbox.add_widget(widget)
         else:
             self.show_popup("Attention", "Veuillez entrer un texte valide et choisir une colonne.")
 
@@ -187,36 +208,139 @@ class LaunchScreen(Screen):
 
         popup.content = content
         popup.open()
+
     def on_enter(self):
         self.ids.search_input.text = ""
         self.loadofs()
+
         if not self.df:
-            self.ids.status_label.text="vous n'avez aucun ordre de fabrication a lancer pour l'instant"
-        else:
-            self.ids.status_label.text=""
+            self.ids.status_label.text = "vous n'avez aucun ordre de fabrication à lancer pour l'instant"
+            return
 
-            self.show_table=True
-            self.show_checkbox=True
-            self.populate_table()
-            grid_checkbox=self.ids.type_chaine
-            grid_checkbox.clear_widgets()
-            roles=self.loadType_chaine()
-            for role in roles:
-                label = Label(
-                    text=role,
-                    font_size=22,
-                    bold=True,
-                    color=(0.1, 0.1, 0.1, 1),
-                )
-                checkbox = CheckBox(
-                    size_hint_x=0.3,
-                    color=(0.49, 0.48, 0.49, 1),
-                    active=(role.lower() == "coupe")
+        self.ids.status_label.text = ""
+        self.show_table = True
+        self.show_checkbox = True
+        self.populate_table()
 
-                )
-                checkbox.bind(active=lambda cb, val, role_name=role: self.checkbox_typeChaine(cb, val, role_name))
-                grid_checkbox.add_widget(label)
-                grid_checkbox.add_widget(checkbox)
+        grid_checkbox = self.ids.type_chaine
+        grid_checkbox.clear_widgets()
+        roles = self.loadType_chaine()
+
+        for role in roles:
+            # Container principal pour chaque ligne
+            widget = self.build_role_widget(role)
+            grid_checkbox.add_widget(widget)
+
+    def build_role_widget(self, role):
+        def update_total_label(*args):
+            nbChampRrempli=0
+            total = 0
+            for champ in jours_inputs.values():
+                try:
+                    val = int(champ.text)
+                    if val != "":
+                        nbChampRrempli += 1
+                    total += val
+                except ValueError:
+                    pass
+            label_nbSemaine_nbJourstotal.text = f"Total : {total}/{self.qte_total}"
+            if nbChampRrempli == 6:
+                totaljour=total / 6        # ignore si vide ou invalide
+                nbsemaine =self.qte_total // total
+                reste = self.qte_total % total
+                val = reste / totaljour
+                nbjours = int(val + 0.5)
+                label_nbSemaine_nbJourstotal.text = f"Total : {total}/{self.qte_total} prend {nbsemaine} semaines et {nbjours} jours"
+
+            elif nbChampRrempli <6 and total==self.qte_total:
+                label_nbSemaine_nbJourstotal.text = f"Total : {total}/{self.qte_total} prend {nbChampRrempli} jours"
+        container = BoxLayout(
+            orientation='vertical',
+            spacing=10,
+            padding=5,
+            size_hint_y=None
+        )
+        container.bind(minimum_height=container.setter('height'))
+
+        # Row: Label + CheckBox
+        top_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(40))
+        label = Label(text=role, font_size=20, color=(0.1, 0.1, 0.1, 1))
+        checkbox = CheckBox(size_hint_x=None, width=50, active=False)
+        top_row.add_widget(label)
+        top_row.add_widget(checkbox)
+
+        # Objectif section visible dès le départ
+        objectif_box = BoxLayout(
+            orientation='vertical',
+            spacing=10,
+            padding=[20, 5],
+            size_hint_y=None
+        )
+        objectif_box.bind(minimum_height=objectif_box.setter('height'))
+
+        # Champs pour chaque jour de la semaine
+        jours_inputs = {}
+
+        for jour in ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]:
+            row = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=None, height=dp(40))
+            jour_label = Label(
+                text=f"{jour.capitalize()} :",
+                size_hint_x=None,
+                width=dp(100),
+                font_size=16,
+                color=(0, 0, 0, 1)
+            )
+            input_field = TextInput(
+                hint_text="Nb paires",
+                size_hint=(None, None),
+                size=(dp(120), dp(40)),
+                input_filter='int',
+                multiline=False,
+                disabled=True,  # Inactif par défaut
+                opacity=0.5,  # Visuellement grisé
+            )
+            input_field.bind(text=update_total_label)
+            jours_inputs[jour] = input_field
+            row.add_widget(jour_label)
+            row.add_widget(input_field)
+            objectif_box.add_widget(row)
+        label_nbSemaine_nbJourstotal = Label(
+            text= ":",
+            size_hint_x=1,  # ← prend toute la largeur dispo
+            halign='left',  # ← aligne à gauche
+            valign='middle',
+            font_size=16,
+            color=(0, 0, 0, 1),
+
+        )
+        objectif_box.add_widget(label_nbSemaine_nbJourstotal)
+
+        # Activer/Désactiver les champs quand la checkbox change
+        def on_checkbox_active(cb, val):
+            existing = next((item for item in self.checks if item["chaine"] == role), None)
+
+            if val:  # coché
+                if not existing:
+                    self.checks.append({
+                        "chaine": role,
+                        "inputs": jours_inputs
+                    })
+            else:  # décoché
+                if existing:
+                    self.checks.remove(existing)
+
+            # Activer/Désactiver les champs
+            for input_field in jours_inputs.values():
+                input_field.disabled = not val
+                input_field.opacity = 1 if val else 0.5
+
+        checkbox.bind(active=on_checkbox_active)
+
+        # Ajout dans le conteneur principal
+        container.add_widget(top_row)
+        container.add_widget(objectif_box)
+
+        return container
 
     def loadType_chaine(self):
         values = []
@@ -251,6 +375,33 @@ class LaunchScreen(Screen):
         print("Lignes sélectionnées :", selected_rows)
 
     def save_ofs_typechaine(self):
+        resultats = []
+
+        for item in self.checks:
+            chaine = item["chaine"]
+            inputs = item["inputs"]
+            objectifs = {}
+
+            for jour, champ in inputs.items():
+                objectifs[jour] = champ.text
+
+            resultats.append({
+                "chaine": chaine,
+                "modele":self.df[0]['Modele'],
+                "qteTotal":self.qte_total,
+                "objectifs": objectifs
+            })
+        print(resultats)
+        return resultats
+
+
+
+
+
+
+
+
+
         self.of_chaines.clear()
         print("saveeeeeeee df",self.df)
         for of in self.df:
