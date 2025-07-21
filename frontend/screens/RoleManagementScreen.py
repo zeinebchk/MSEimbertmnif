@@ -83,7 +83,7 @@ class RoleManagementScreen(Screen):
             self.modeles=[model["nom_modele"] for model in data]
             self.ids.model_id.values=self.modeles
         else:
-            print("Erreur lors du chargement des utilisateurs :", response)
+            print("Erreur lors du chargement des models :", response)
 
     def chercher_par_nom(self):
         search_text=self.ids.search_input.text

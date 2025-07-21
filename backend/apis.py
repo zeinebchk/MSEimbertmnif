@@ -4,6 +4,7 @@ import sys
 from flask import Flask, request,jsonify
 from flask.cli import load_dotenv
 from flask_migrate import Migrate
+from manage_planification_chaine_modele import manage_planification_modele_chaine_bp
 from extension import db,jwt
 
 
@@ -21,7 +22,7 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 #second ebase de donnes pour recuperer les modeles
 app.config['SQLALCHEMY_BINDS'] = {
-    'db2': 'mysql+pymysql://omar:1234@192.168.1.225/gammes'  # base secondaire
+    'db2': 'mysql+pymysql://omar:1234@192.168.1.210/gammes'  # base secondaire
 }
 
 print("DATABASE_URL =", os.getenv('DATABASE_URL'))
@@ -32,7 +33,7 @@ migrate = Migrate(app, db)
 app.register_blueprint(manageusers_bp,url_prefix='/manage_users')
 app.register_blueprint(auth_bp,url_prefix='/auth')
 app.register_blueprint(manage_chaine_roles_bp,url_prefix='/manage_chaine_roles')
-
+app.register_blueprint(manage_planification_modele_chaine_bp,url_prefix='/manage_planification_chaine_modele')
 app.register_blueprint(manage_ofs_bp,url_prefix='/manage_ofs')
 
 #load user dans la session

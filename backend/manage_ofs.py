@@ -1,8 +1,9 @@
 from flask import Blueprint,jsonify,request
+
 from schemas import OFSSchema, GetOfsForUpdate, GetOfsByModele, GetofsGroupByidChaineSchema, GetofsByidChaineSchema, \
     get_all_ofs_by_modelesSchema, ModelesSchema
 from flask_jwt_extended import jwt_required, get_jwt, current_user
-from models import OFS, OFSChaine, CodeModeles
+from models import OFS, OFSChaine, CodeModeles, Planification, PlanificationChaineModeles
 
 manage_ofs_bp=Blueprint('manage_ofs', __name__)
 
@@ -14,7 +15,6 @@ def addofschaine():
     if current_user.role == "production":
         data=request.get_json()
         print(data)
-
         for of in data:
             ofchaine=OFSChaine.get_ofs_chaine_by_numOF(of["numCommandeOF"],of["idchaine"])
             print(ofchaine)
@@ -24,7 +24,10 @@ def addofschaine():
                     numCommandeOF=of["numCommandeOF"],
                     dateLancement_of_chaine=None,
                     dateFin = None,
-                    etat="enAttente"
+                    etat="enAttente",
+                    regimeHoraire=of["regimeHoraire"],
+                    idPlanification=of["idPlanification"],
+
                 )
                 ofch.save_chaine_of()
                 of=OFS.get_of_by_numOF(of["numCommandeOF"])
@@ -36,20 +39,6 @@ def addofschaine():
         return jsonify({"message": "ofs_chaines added successfully"}, 200)
     else:
         return jsonify({"message": "Vous n'etes pas autorisé pour cette focntion"}, 401)
-
-    #     else:
-    #
-    #         new_user=User(
-    #             username=data.get("username"),
-    #             role=data.get("role"),
-    #             authorized=data.get("authorized"),)
-    #         new_user.generate_password(password=data.get("password"))
-    #
-    #         new_user.save_user()
-    #         return jsonify({"message": "User added successfully"},200)
-    # return jsonify({"message": "Vous n'etes pas autorisé pour cette focntion"},401)
-
-
 
 
 @manage_ofs_bp.get("/getAllLatestOfs")
@@ -88,24 +77,36 @@ def update_of_chaine():
         of_chaines=request.get_json().get("ofs_chaines")
         unique_ids = list(set(item["numCommandeOF"] for item in of_chaines))
         print(data)
-
         for numcmd in unique_ids:
             for ch in chaine_data:
                 ofchaine=OFSChaine.get_ofs_chaine_by_numOF(numcmd,ch)
-                if ofchaine.etat=="enAttente":
-                    ofchaine.delete_of_chaine()
+                if ofchaine is not None:
+                    if ofchaine.etat=="enAttente":
+                        ofchaine.delete_of_chaine()
 
         for of in of_chaines:
+            print(of)
             ofchaine = OFSChaine.get_ofs_chaine_by_numOF(of["numCommandeOF"],of["idchaine"])
+
             if ofchaine is None:
                 ofch=OFSChaine(
                 idChaine=of["idchaine"],
                 numCommandeOF=of["numCommandeOF"],
                 dateLancement_of_chaine=None,
                 dateFin = None,
-                etat="enAttente"
+                etat="enAttente",
+                idPlanification=of["idPlanification"],
+                regimeHoraire=of["regimeHoraire"],
                 )
                 ofch.save_chaine_of()
+                print("sace chaine of successs")
+            else:
+                ofchaine.update_planOf_chaine(of["idPlanification"])
+                idPlan=ofchaine.idPlanification
+                plan=PlanificationChaineModeles.get_plan_by_id(idPlan)
+                if plan is not None:
+                    plan.delete_planification()
+                    print("plan is deleted",idPlan)
         return jsonify({"message": "ofs_chaines added successfully"}, 200)
     else:
         return jsonify({"message": "Vous n'etes pas autorisé pour cette focntion"}, 401)
@@ -114,8 +115,10 @@ def update_of_chaine():
 @jwt_required()
 def getOFSChainesByreference():
     if current_user.role == "production":
-        data = request.get_json().get('prefix')
-        ofs=OFS.get_ofs_chaines(data)
+        prefix = request.get_json().get('numof')
+        annee=request.get_json().get('annee')
+        modele=request.get_json().get('modele')
+        ofs=OFS.get_ofs_chaines(prefix,annee,modele)
         ofs_result = GetOfsForUpdate().dump(ofs, many=True)
         return jsonify({
             "ofs":ofs_result,

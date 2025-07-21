@@ -75,7 +75,7 @@ def deleteChaine():
 @manage_chaine_roles_bp.get("/get_all_models")
 @jwt_required()
 def get_all_models():
-    if current_user.role == "userManager":
+    if current_user.role in ["userManager","production"]:
         modeles=CodeModeles.get_all_codemodeles()
         modelesSchema=ModelesSchema().dump(modeles,many=True)
         print(modelesSchema)
@@ -126,7 +126,7 @@ def addORUpdatePlanification():
 @manage_chaine_roles_bp.get("/getPlanBymodelChaineAndRegime")
 @jwt_required()
 def getPlanBymodelChaineAndRegime():
-    if current_user.role == "userManager":
+    if current_user.role == "userManager" or current_user.role == "production":
         data = request.get_json()
         modele = data.get("modele")
         chaine = data.get("chaine")
@@ -140,6 +140,9 @@ def getPlanBymodelChaineAndRegime():
         return jsonify({
             "message": "user n'existe pas dans la base"
         },404)
+    return jsonify({
+        "message": "unauthorized"
+    }, 401)
 @manage_chaine_roles_bp.get("/getPlanBymodelChaine")
 @jwt_required()
 def getPlanBymodelChaine():

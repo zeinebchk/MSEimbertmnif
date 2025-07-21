@@ -1,4 +1,5 @@
 import math
+from gc import disable
 
 import numpy as np
 from kivy.app import App
@@ -19,6 +20,7 @@ import os
 from kivy.animation import Animation
 from kivy.uix.spinner import Spinner
 from kivy.uix.textinput import TextInput
+from kivy.uix.widget import Widget
 from sqlalchemy import Selectable
 
 from frontend.Client import make_request
@@ -41,7 +43,9 @@ class LaunchScreen(Screen):
         self.selected_rows = []
         self.checks = []
         self.checksChainePicure=[]
+        self.planification=[]
         self.qte_total=0
+
     def on_parent(self, *args):
         # Synchronize horizontal scrolling between header_scroll and table_scroll
         if hasattr(self, 'table_scroll') and hasattr(self, 'header_scroll'):
@@ -102,15 +106,24 @@ class LaunchScreen(Screen):
             header.bind(size=header.setter('text_size'))
             header_layout.add_widget(header)
 
-        # Lignes du tableau
-        max_height = dp(400)
-        #self.table_grid.cols = n_cols
-        self.table_grid.width = total_width
-        self.table_grid.size_hint_x = None
-        self.table_grid.size_hint_y = None
+        max_visible_rows = 15
+        row_height = dp(40)
+        max_height = max_visible_rows * row_height
+
         content_height = row_height * len(self.df)
-        self.table_grid.height = min(content_height, max_height)
-        self.ids.box_table_container.height = dp(40) + self.table_grid.height
+
+        # Limiter la hauteur visible du ScrollView (scroll activé si dépasse)
+        self.ids.table_grid.height = content_height
+        self.ids.box_table_container.height = dp(40) + min(content_height, max_height)
+        # Lignes du tableau
+        # max_height = dp(460)
+        # #self.table_grid.cols = n_cols
+        # self.table_grid.width = total_width
+        # self.table_grid.size_hint_x = None
+        # self.table_grid.size_hint_y = None
+        # content_height = row_height * len(self.df)
+        # self.table_grid.height = min(content_height, max_height)
+        # self.ids.box_table_container.height = dp(40) + content_height
         for row in self.df:
             row_data = []
             for col in columns:
@@ -209,8 +222,164 @@ class LaunchScreen(Screen):
         popup.content = content
         popup.open()
 
+    def get_global_plan(self,chaine,regime,modele):
+        print("get plan aaaaa")
+        data = {
+             "modele":modele,
+             "chaine":chaine,
+             "regime":regime
+        }
+        response = make_request("get", "/manage_chaine_roles/getPlanBymodelChaineAndRegime", json=data)
+        if response.json()[1] == 200:
+            print(response.json()[0])
+            data = response.json()[0].get("plan")
+            return data
+        return None
+
+    def show_popup_formulaire_regimes(self, chaine, regime, modele,titre):
+        listplan=[item for item in self.checks if item["chaine"] == chaine]
+        if listplan:
+            plan=listplan[0]
+        else:
+            plan = self.get_global_plan(chaine, regime, modele)
+        popup = Popup(
+            title="Formulaire Régime Horaire",
+            size_hint=(0.75, 0.6),
+            auto_dismiss=False
+        )
+
+        content = BoxLayout(
+            orientation='vertical',
+            spacing=dp(10),
+            padding=[dp(10), dp(10), dp(10), dp(10)]
+        )
+
+        with content.canvas.before:
+            Color(0.95, 0.95, 0.95, 1)
+            rect = Rectangle(pos=content.pos, size=content.size)
+
+        def update_rect(instance, value):
+            rect.pos = instance.pos
+            rect.size = instance.size
+
+        content.bind(pos=update_rect, size=update_rect)
+
+        main_layout = BoxLayout(
+            orientation='vertical',
+            spacing=dp(10),
+            size_hint=(1, None),
+            height=dp(400)
+        )
+
+        # Titre
+        main_layout.add_widget(Label(
+            text=f"[b]Régime {titre}[/b]",
+            markup=True,
+            font_size=20,
+            size_hint_y=None,
+            height=dp(30),
+            color=(0, 0, 0, 1),
+            halign='center'
+        ))
+
+        # Header
+        header = BoxLayout(orientation='horizontal', spacing=dp(3), size_hint_y=None, height=dp(25))
+        header.add_widget(Label(text="Jour", size_hint_x=0.4,opacity=0))
+        header.add_widget(Label(text="Heure/jour", size_hint_x=0.3,color=(0, 0, 0, 1)))
+        header.add_widget(Label(text="Paires/jour", size_hint_x=0.3,color=(0, 0, 0, 1)))
+        main_layout.add_widget(header)
+
+        # Pour stocker les champs et récupérer les valeurs plus tard
+        regime_inputs = {}
+
+        jours = ["Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"]
+        for jour in jours:
+            row = BoxLayout(orientation='horizontal', spacing=dp(3), size_hint_y=None, height=dp(32))
+
+            row.add_widget(Label(text=f"{jour} :", size_hint_x=0.4,color=(0, 0, 0, 1)))
+            horaire_val = str(plan.get(f"horaire{jour}", "7"))  # "7" par défaut
+            nbpaire_val = str(plan.get(f"nbPaire{jour}", ""))  # vide par défaut
+            heure_input = TextInput(
+                text=horaire_val,
+                multiline=False,
+                input_filter='float',
+                size_hint_x=0.3,
+                height=dp(28)
+            )
+            paire_input = TextInput(
+                text=nbpaire_val,
+                multiline=False,
+                input_filter='int',
+                size_hint_x=0.3,
+                height=dp(28)
+            )
+
+            # Stocker les champs dans un dictionnaire
+            regime_inputs[f"horaire{jour}"] = heure_input
+            regime_inputs[f"nbPaire{jour}"] = paire_input
+
+            row.add_widget(heure_input)
+            row.add_widget(paire_input)
+
+            main_layout.add_widget(row)
+
+        content.add_widget(main_layout)
+
+        # Layout boutons
+        btn_layout = BoxLayout(
+            orientation='horizontal',
+            spacing=dp(20),
+            size_hint=(1, None),
+            height=dp(50),
+            padding=[dp(30), 0, dp(30), 0]
+        )
+        btn_layout.add_widget(Widget())
+
+        btn_save = Button(
+            text="Enregistrer",
+            size_hint=(None, None),
+            size=(dp(150), dp(40)),
+            background_color=(0.4, 0.7, 1, 1),
+            color=(1, 1, 1, 1)
+        )
+        btn_save.bind(on_release=lambda x: self.enregistrer(regime_inputs,chaine,regime,modele,popup))
+
+
+        btn_close = Button(
+            text="Fermer",
+            size_hint=(None, None),
+            size=(dp(120), dp(40)),
+            background_color=(1, 0.4, 0.4, 1),
+            color=(1, 1, 1, 1)
+        )
+        btn_close.bind(on_release=popup.dismiss)
+
+        btn_layout.add_widget(btn_close)
+        btn_layout.add_widget(btn_save)
+        content.add_widget(btn_layout)
+
+        popup.content = content
+        popup.open()
+
+    def enregistrer(self,inputs,chaine,regime,modele,popup):
+
+        data={
+            "chaine":chaine,
+            "regime":regime,
+            "modele":modele,
+        }
+        for key, input_field in inputs.items():
+            data[key] = input_field.text
+        for item in self.checks:
+            if item["chaine"] == chaine:
+                self.checks.remove(item)
+        self.checks.append(data)
+        print(self.checks)
+        popup.dismiss()
+
     def on_enter(self):
         self.ids.search_input.text = ""
+        self.ids.regimeHoraire_id.text="42h"
         self.loadofs()
 
         if not self.df:
@@ -221,126 +390,85 @@ class LaunchScreen(Screen):
         self.show_table = True
         self.show_checkbox = True
         self.populate_table()
+        self.display_roles()
 
+    def display_roles(self):
         grid_checkbox = self.ids.type_chaine
         grid_checkbox.clear_widgets()
         roles = self.loadType_chaine()
-
         for role in roles:
             # Container principal pour chaque ligne
             widget = self.build_role_widget(role)
             grid_checkbox.add_widget(widget)
 
     def build_role_widget(self, role):
-        def update_total_label(*args):
-            nbChampRrempli=0
-            total = 0
-            for champ in jours_inputs.values():
-                try:
-                    val = int(champ.text)
-                    if val != "":
-                        nbChampRrempli += 1
-                    total += val
-                except ValueError:
-                    pass
-            label_nbSemaine_nbJourstotal.text = f"Total : {total}/{self.qte_total}"
-            if nbChampRrempli == 6:
-                totaljour=total / 6        # ignore si vide ou invalide
-                nbsemaine =self.qte_total // total
-                reste = self.qte_total % total
-                val = reste / totaljour
-                nbjours = int(val + 0.5)
-                label_nbSemaine_nbJourstotal.text = f"Total : {total}/{self.qte_total} prend {nbsemaine} semaines et {nbjours} jours"
-
-            elif nbChampRrempli <6 and total==self.qte_total:
-                label_nbSemaine_nbJourstotal.text = f"Total : {total}/{self.qte_total} prend {nbChampRrempli} jours"
         container = BoxLayout(
             orientation='vertical',
-            spacing=10,
-            padding=5,
-            size_hint_y=None
+            size_hint_y=None,
+            height=dp(140),
+            spacing=dp(5)
         )
-        container.bind(minimum_height=container.setter('height'))
 
-        # Row: Label + CheckBox
-        top_row = BoxLayout(orientation='horizontal', size_hint_y=None, height=dp(40))
-        label = Label(text=role, font_size=20, color=(0.1, 0.1, 0.1, 1))
-        checkbox = CheckBox(size_hint_x=None, width=50, active=False)
-        top_row.add_widget(label)
-        top_row.add_widget(checkbox)
-
-        # Objectif section visible dès le départ
-        objectif_box = BoxLayout(
-            orientation='vertical',
-            spacing=10,
-            padding=[20, 5],
-            size_hint_y=None
+        top_row = BoxLayout(
+            orientation='horizontal',
+            size_hint_y=None,
+            height=dp(40),
+            spacing=dp(10)
         )
-        objectif_box.bind(minimum_height=objectif_box.setter('height'))
 
-        # Champs pour chaque jour de la semaine
-        jours_inputs = {}
+        label = Label(
+            text=role,
+            size_hint_x=0.7,
+            font_size='16sp',
+            color=(0.1, 0.1, 0.1, 1)
+        )
 
-        for jour in ["lundi", "mardi", "mercredi", "jeudi", "vendredi", "samedi"]:
-            row = BoxLayout(orientation='horizontal', spacing=10, size_hint_y=None, height=dp(40))
-            jour_label = Label(
-                text=f"{jour.capitalize()} :",
-                size_hint_x=None,
-                width=dp(100),
-                font_size=16,
-                color=(0, 0, 0, 1)
-            )
-            input_field = TextInput(
-                hint_text="Nb paires",
-                size_hint=(None, None),
-                size=(dp(120), dp(40)),
-                input_filter='int',
-                multiline=False,
-                disabled=True,  # Inactif par défaut
-                opacity=0.5,  # Visuellement grisé
-            )
-            input_field.bind(text=update_total_label)
-            jours_inputs[jour] = input_field
-            row.add_widget(jour_label)
-            row.add_widget(input_field)
-            objectif_box.add_widget(row)
-        label_nbSemaine_nbJourstotal = Label(
-            text= ":",
-            size_hint_x=1,  # ← prend toute la largeur dispo
-            halign='left',  # ← aligne à gauche
-            valign='middle',
-            font_size=16,
+        # Sous-container pour CheckBox + bouton 👁
+        checkbox_row = BoxLayout(
+            orientation='horizontal',
+            size_hint_x=0.3,
+            spacing=dp(2)  # très petit espacement pour qu’ils soient proches
+        )
+
+        checkbox = CheckBox(
+            size_hint_x=None,
+            width=dp(30)
+        )
+
+        eye_button = Button(
+            text='👁',
+            size_hint_x=None,
+            width=dp(20),
+            height=dp(20),
+            background_normal='',
+            background_color=(0, 0, 0, 0),
             color=(0, 0, 0, 1),
-
+            font_size='16sp',
+            font_name='seguiemj.ttf'
         )
-        objectif_box.add_widget(label_nbSemaine_nbJourstotal)
+        eye_button.bind(on_release=lambda instance: self.on_eye_click(role))
 
-        # Activer/Désactiver les champs quand la checkbox change
-        def on_checkbox_active(cb, val):
-            existing = next((item for item in self.checks if item["chaine"] == role), None)
+        checkbox_row.add_widget(checkbox)
+        checkbox_row.add_widget(eye_button)
 
-            if val:  # coché
-                if not existing:
-                    self.checks.append({
-                        "chaine": role,
-                        "inputs": jours_inputs
-                    })
-            else:  # décoché
-                if existing:
-                    self.checks.remove(existing)
+        top_row.add_widget(label)
+        top_row.add_widget(checkbox_row)
 
-            # Activer/Désactiver les champs
-            for input_field in jours_inputs.values():
-                input_field.disabled = not val
-                input_field.opacity = 1 if val else 0.5
-
-        checkbox.bind(active=on_checkbox_active)
-
-        # Ajout dans le conteneur principal
         container.add_widget(top_row)
-        container.add_widget(objectif_box)
+
+        # Gestion de l'activation/désactivation
+        def on_active(instance, value):
+            self.checkbox_typeChaine(instance, value, role)
+
+        checkbox.bind(active=on_active)
 
         return container
+    def on_eye_click(self, role):
+        regime = self.ids.regimeHoraire_id.text
+        if regime == "42h":
+            self.show_popup_formulaire_regimes(role, regime, self.df[0]["Modele"], "42h")
+        else:
+            self.show_popup_formulaire_regimes(role, regime, self.df[0]["Modele"], "48h")
 
     def loadType_chaine(self):
         values = []
@@ -352,16 +480,19 @@ class LaunchScreen(Screen):
             return values
         else:
             print("Erreur lors du chargement des utilisateurs :", response)
-
-    def checkbox_typeChaine(self, instance,value,topping):
-        print(value)
+    def checkbox_typeChaine(self, instance, value, chaine):
         if value:
-            if topping not in self.checks:
-                self.checks.append(topping)
+            regime=self.ids.regimeHoraire_id.text
+            if chaine not in self.checks:
+                if regime == "42h":
+                    self.show_popup_formulaire_regimes(chaine,regime,self.df[0]["Modele"],"42h")
+                else:
+                    self.show_popup_formulaire_regimes(chaine,regime,self.df[0]["Modele"],"48h")
         else:
-            if topping in self.checks:
-                self.checks.remove(topping)
-        print(f"Current checks: {self.checks}")
+            for item in self.checks:
+                if item["chaine"]==chaine:
+                    self.checks.remove(item)
+        print(f"Chaînes sélectionnées: {self.checks}")
 
     def get_selected_rows(self):
         selected = []
@@ -373,53 +504,46 @@ class LaunchScreen(Screen):
     def on_row_selection_changed(self):
         selected_rows = self.get_selected_rows()
         print("Lignes sélectionnées :", selected_rows)
-
+    def getPlanBymodelChaineAndRegime(self,model,chaine,regimehoraire):
+        data={
+            "modele": model,
+            "chaine": chaine,
+            "regime": regimehoraire
+        }
+        response = make_request("get", "/manage_chaine_roles/getPlanBymodelChaineAndRegime", json=data)
+        print("response", response)
+        if response.json()[1] == 404:
+            return None
+        elif response.json()[1] == 200:
+            return response.json()[0]
     def save_ofs_typechaine(self):
-        resultats = []
-
-        for item in self.checks:
-            chaine = item["chaine"]
-            inputs = item["inputs"]
-            objectifs = {}
-
-            for jour, champ in inputs.items():
-                objectifs[jour] = champ.text
-
-            resultats.append({
-                "chaine": chaine,
-                "modele":self.df[0]['Modele'],
-                "qteTotal":self.qte_total,
-                "objectifs": objectifs
-            })
-        print(resultats)
-        return resultats
-
-
-
-
-
-
-
-
-
         self.of_chaines.clear()
         print("saveeeeeeee df",self.df)
-        for of in self.df:
-            num_of = of.get("numOF")
-            for chaine in self.checks:
-                ofchaine = {
-                    "idchaine": chaine,
-                    "numCommandeOF": num_of
-                }
-                self.of_chaines.append(ofchaine)
-        print(self.of_chaines)
+        regime_horaire=self.ids.regimeHoraire_id.text
+        for item in self.checks:
+            response = make_request("post", "/manage_planification_chaine_modele/addOrUpdatePlanification", json=item)
+            if response.json()[1] == 201:
+                id = response.json()[0]["id"]
+                for of in self.df:
+                    num_of = of.get("numOF")
+                    ofchaine = {
+                    "regimeHoraire": regime_horaire,
+                    "modele":of.get("Modele"),
+                    "idchaine": item["chaine"],
+                    "numCommandeOF": num_of,
+                    "idPlanification":id
+                    }
+                    self.of_chaines.append(ofchaine)
+            print(self.of_chaines)
+
         response = make_request("post", "/manage_ofs/addOfs_chaines", json=self.of_chaines)
         print("response",response)
         if response.status_code== 200:
             print("200000000000000000000000000000000000000")
-
+            self.display_roles()
             self.show_popup("succées","OF enregistréé avec succées")
             self.loadofs()
+            self.checks=[]
             if not self.df:
                 self.ids.status_label.text = "vous n'avez aucun ordre de fabrication a lancer pour l'instant"
                 self.show_table=False

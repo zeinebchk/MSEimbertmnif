@@ -1,5 +1,4 @@
 <UpdateLaunchScreen>:
-    search_input: search_input
     table_grid: table_grid
     table_scroll: table_scroll
     header_scroll: header_scroll
@@ -38,11 +37,11 @@
                 size_hint_x: 1
                 text_size: self.size
 
-        # --- Corps : Sidebar + Contenu scrollable ---
+        # --- Corps ---
         BoxLayout:
             orientation: 'horizontal'
 
-            # --- Sidebar fixe ---
+            # --- Sidebar ---
             BoxLayout:
                 orientation: 'vertical'
                 size_hint_x: 0.2
@@ -72,6 +71,7 @@
                     font_name: 'EmojiFont'
                     font_size: '16sp'
                     on_release: app.root_to_dashboardProduction()
+
                 Button:
                     text: "En cours"
                     font_name: 'EmojiFont'
@@ -84,7 +84,7 @@
                     font_size: '16sp'
                     on_release: app.logout()
 
-            # --- Contenu scrollable ---
+            # --- Contenu principal ---
             ScrollView:
                 do_scroll_y: True
                 do_scroll_x: False
@@ -102,30 +102,79 @@
                         size_hint_y: None
                         height: dp(50)
                         spacing: dp(10)
-
-                        TextInput:
-                            id: search_input
-                            hint_text: '🔍 Rechercher...'
-                            font_name: 'EmojiFont'
-                            size_hint_x: 0.5
-                            multiline: False
+                        Spinner:
+                            id: year_id
+                            opacity:1
+                            text: "Choisir l'année"
+                            values: []
+                            size_hint_x: 0.25
+                            size_hint_y: None
+                            height: dp(40)
                             font_size: 18
-                            foreground_color: 0, 0, 0, 1
-                            cursor_color: 0, 0, 0, 1
+                            color: 0, 0, 0, 1
+                            background_normal: ''  # pour enlever image de fond par défaut
+                            background_color: 1, 1, 1, 1  # blanc
+
+                            canvas.before:
+                                Color:
+                                    rgba: 0.8, 0.8, 0.8, 1  # gris clair pour la bordure
+                                Line:
+                                    width: 1.2
+                                    rectangle: self.x, self.y, self.width, self.height
+
+                            # Emoji chevron bas à droite
+                            RelativeLayout:
+                                size: root.size
+                                pos: root.pos
+                        Spinner:
+                            id: week_id
+                            opacity:1
+                            text: "Choisir le num de semaine"
+                            values: []
+                            size_hint_x: 0.25
+                            size_hint_y: None
+                            height: dp(40)
+                            font_size: 18
+                            color: 0, 0, 0, 1
+                            background_normal: ''  # pour enlever image de fond par défaut
+                            background_color: 1, 1, 1, 1  # blanc
+
+                            canvas.before:
+                                Color:
+                                    rgba: 0.8, 0.8, 0.8, 1  # gris clair pour la bordure
+                                Line:
+                                    width: 1.2
+                                    rectangle: self.x, self.y, self.width, self.height
+
+                            # Emoji chevron bas à droite
+                            RelativeLayout:
+                                size: root.size
+                                pos: root.pos
+                        Spinner:
+                            id: model_id
+                            text: "Choisir un modèle"
+                            values: []
+                            size_hint_x: None
+                            size_hint_y: None
+                            width:dp(250)
+                            height: dp(40)
+                            font_size: 18
                             background_normal: ''
-                            background_color: 0.95, 0.95, 0.95, 1
-                            padding: dp(5)
+                            background_color: 1, 1, 1, 1
+                            color: 0, 0, 0, 1
+                            canvas.before:
+                                Color:
+                                    rgba: 0.8, 0.8, 0.8, 1
+                                Line:
+                                    width: 1.2
+                                    rectangle: self.x, self.y, self.width, self.height
 
                         Button:
                             text: "🔎 Rechercher"
                             font_name: 'EmojiFont'
                             size_hint_x: 0.15
                             size_hint_y: None
-                            height: dp(50)
-                            background_normal: ''
-                            background_color: 0.7, 0.85, 1, 1
-                            color: 0, 0, 0, 1
-                            font_size: '14sp'
+                            height: dp(40)
                             on_press: root.search()
 
                         Button:
@@ -136,22 +185,23 @@
                             background_color: 1, 0.7, 0.7, 1
                             color: 0, 0, 0, 1
                             font_size: '14sp'
+                            size_hint_y: None
+                            height: dp(40)
                             on_press: root.reset_filter()
 
-                    # --- Tableau ---
+                    # --- Tableau avec entêtes et contenu ---
                     BoxLayout:
                         id: box_table_container
                         orientation: 'vertical'
                         size_hint_y: None
-                        height: self.minimum_height
+                        height: dp(500)
 
+                        # --- En-têtes du tableau ---
                         ScrollView:
                             id: header_scroll
                             do_scroll_x: True
                             do_scroll_y: False
                             size_hint_y: None
-                            height: dp(40)
-
                             GridLayout:
                                 id: header_grid
                                 size_hint_y: None
@@ -160,11 +210,12 @@
                                 width: self.minimum_width
                                 cols: 1
 
+                        # --- Lignes du tableau ---
                         ScrollView:
                             id: table_scroll
                             do_scroll_x: True
                             do_scroll_y: True
-
+                            height: dp(460)
                             GridLayout:
                                 id: table_grid
                                 size_hint_y: None
@@ -173,10 +224,55 @@
                                 width: self.minimum_width
                                 cols: 1
 
-                    # --- Sélection de type de chaîne ---
+                        # --- Cocher tous ---
+                        BoxLayout:
+                            size_hint_y: None
+                            height: dp(50)
+                            padding: [dp(10), 0, 0, 0]  # plus de padding à droite
+                            spacing: dp(5)  # réduit l’espacement entre les éléments
+                            orientation: 'horizontal'
+                            size_hint_x: None
+                            width: dp(700)  # largeur fixe si tu veux tout coller à gauche
+                            pos_hint: {'x': 0}  # aligne à gauche
+
+                            CheckBox:
+                                id: select_all_checkbox
+                                on_active: root.select_all_rows(self.active)
+                                size_hint: None, None
+                                size: dp(20), dp(20)
+                                background_normal: ''
+                                background_down: ''
+                                canvas.before:
+                                    Color:
+                                        rgba: 0, 0, 0, 1
+                                    Line:
+                                        width: 1
+                                        rectangle: (self.x, self.y, self.width, self.height)
+
+                            Label:
+                                text: "Cocher tous"
+                                font_size: '14sp'
+                                color: 0, 0, 0, 1
+                                size_hint: None, None
+                                size: dp(100), dp(25)   # ajuste à la taille du texte
+                                valign: 'middle'
+                                halign: 'left'
+                                text_size: self.size
+
+                            Button:
+                                text: "Valider sélection et modifier"
+                                size_hint: None, None
+                                size: dp(200), dp(25)
+                                background_color: 0.4, 0.7, 1, 1
+                                color: 1, 1, 1, 1
+                                on_release: root.valider_selection()
+
+
+                    # --- Type de chaîne ---
                     BoxLayout:
-                        id: my_checkbox
+                        opacity: 1 if root.show_checkboxes else 0
                         orientation: 'vertical'
+                        id: my_checkbox
                         size_hint_y: None
                         height: self.minimum_height
                         padding: dp(20)
@@ -190,6 +286,12 @@
                             color: 0.2, 0.2, 0.2, 1
                             size_hint_y: None
                             height: dp(50)
+                            canvas.before:
+                                Color:
+                                    rgba: 0.92, 0.92, 0.92, 1
+                                Rectangle:
+                                    pos: self.pos
+                                    size: self.size
 
                         GridLayout:
                             id: type_chaine
@@ -198,7 +300,7 @@
                             height: self.minimum_height
                             spacing: dp(30)
                             padding: dp(30)
-                            row_default_height: dp(40)
+                            row_default_height: dp(80)
                             row_force_default: True
                             canvas.before:
                                 Color:
@@ -212,12 +314,20 @@
                                     rectangle: (self.x, self.y, self.width, self.height)
                                     width: 1
 
-                        Button:
-                            text: "Enregistrer"
-                            color: 0, 0, 0, 1
-                            font_size: '16sp'
-                            size_hint_y: None
-                            height: dp(50)
-                            background_normal: ''
-                            background_color: 1, 0.85, 0.4, 1
-                            on_release: root.save_ofs_typechaine()
+                    # --- Bouton Enregistrer ---
+                    Button:
+                        opacity:1 if root.show_checkboxes else 0
+                        text: "Enregistrer"
+                        color: 0, 0, 0, 1
+                        font_size: '16sp'
+                        size_hint_y: None
+                        height: dp(50)
+                        background_normal: ''
+                        background_color: 1, 0.85, 0.4, 1
+                        on_release: root.save_ofs_typechaine()
+                        canvas.before:
+                            Color:
+                                rgba: 0.7, 0.7, 0.7, 1
+                            Line:
+                                rectangle: (self.x, self.y, self.width, self.height)
+                                width: 1

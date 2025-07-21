@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import ForeignKey, func, join, cast, String, case, distinct, Integer
+from sqlalchemy import ForeignKey, func, join, cast, String, case, distinct, Integer, extract
 from sqlalchemy.orm import relationship, aliased
 
 from extension import db
@@ -72,7 +72,18 @@ class OFS(db.Model):
         return cls.query.filter_by(dateLancement=dateLancement).all()
 
     @classmethod
-    def get_ofs_chaines(cls,prefix=None):
+    def get_ofs_chaines(cls, prefix=None, annee=None, modele=None):
+        numof_str = cast(OFS.numOF, String)
+        length_numof = func.length(numof_str)
+
+        # Génère la bonne sous-chaîne en fonction de la longueur du numOF
+        substring_cond = case(
+            (length_numof == 6, func.substr(numof_str, 2)),
+            (length_numof == 8, func.substr(numof_str, 4)),
+            else_=func.substr(numof_str, 2)
+        )
+
+        # Requête de base
         query = db.session.query(
             OFS.numOF,
             OFS.Pointure,
@@ -80,20 +91,32 @@ class OFS(db.Model):
             OFS.Modele,
             OFS.Coloris,
             OFS.SAIS,
-            OFS.dateLancement,
+            OFS.dateCreation,
             OFS.etat,
+            OFSChaine.regimeHoraire,
             func.group_concat(OFSChaine.idChaine.op('ORDER BY')(OFSChaine.idChaine), ',').label('parcours')
         ).join(OFSChaine, OFS.numOF == OFSChaine.numCommandeOF)
+        query=query.filter(OFSChaine.etat!="termine")
+        # Filtres dynamiques
+        if modele:
+            query = query.filter(OFS.Modele == modele)
         if prefix:
-            query = query.filter(cast(OFS.numOF, String).like(f"{prefix}%"))
-        query = query.group_by(OFS.numOF,
-                               OFS.Pointure,
-                               OFS.Quantite,
-                               OFS.Modele,
-                               OFS.Coloris,
-                               OFS.SAIS,
-                               OFS.dateLancement,
-                               OFS.etat)
+            query = query.filter(substring_cond.like(f"%{prefix}%"))
+        if annee:
+            query = query.filter(extract('year', OFS.dateCreation) == annee)
+
+        # Groupement
+        query = query.group_by(
+            OFS.numOF,
+            OFS.Pointure,
+            OFS.Quantite,
+            OFS.Modele,
+            OFS.Coloris,
+            OFS.SAIS,
+            OFS.dateCreation,
+            OFS.etat,
+            #OFSChaine.regimeHoraire,
+        )
 
         return query.all()
 
@@ -288,6 +311,8 @@ class OFSChaine(db.Model):
     dateLancement_of_chaine = db.Column(db.Date)
     dateFin = db.Column(db.Date)
     etat = db.Column(db.String(20), nullable=False)
+    regimeHoraire=db.Column(db.Integer(), nullable=False)
+    idPlanification=db.Column(db.Integer(), db.ForeignKey('planification_chaine_modeles.id'),nullable=False)
 
     type_chaine = relationship("TypeChaine", back_populates="ofs_chaines")
     ofs = relationship("OFS", back_populates="ofs_chaines")
@@ -301,7 +326,9 @@ class OFSChaine(db.Model):
     @classmethod
     def get_ofs_chaine_by_numOF(cls,numOf,idch):
         return cls.query.filter_by(numCommandeOF=numOf,idChaine=idch).first()
-
+    def update_planOf_chaine(self,idPlan):
+        self.idPlanification=idPlan
+        db.session.add(self)
     @classmethod
     def get_nb_of_termine_par_modele(cls, modele_donne, num):
         num_str = str(num)
@@ -601,6 +628,7 @@ class Planification(db.Model):
             chaine=chaine,
             modele=modele,
         ).all()
+
 class CodeModeles(db.Model):
     __bind_key__ = 'db2'
     __tablename__ = 'code_modeles'
@@ -611,4 +639,77 @@ class CodeModeles(db.Model):
     def get_all_codemodeles(cls):
         return cls.query.all()
 
+class PlanificationChaineModeles(db.Model):
+    __tablename__ = 'planification_chaine_modeles'
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    modele = db.Column(db.String(100))
+    chaine = db.Column(db.String(20), db.ForeignKey('type_chaine.id'), nullable=False)
+    regimeHoraire = db.Column(db.Integer)
+    dateCreation=db.Column(db.Date)
+    horaireLundi = db.Column(db.Float)
+    nbPaireLundi = db.Column(db.Integer)
+    horaireMardi = db.Column(db.Float)
+    nbPaireMardi = db.Column(db.Integer)
+    horaireMercredi = db.Column(db.Float)
+    nbPaireMercredi = db.Column(db.Integer)
+    horaireJeudi = db.Column(db.Float)
+    nbPaireJeudi = db.Column(db.Integer)
+    horaireVendredi = db.Column(db.Float)
+    nbPaireVendredi = db.Column(db.Integer)
+    horaireSamedi = db.Column(db.Float)
+    nbPaireSamedi = db.Column(db.Integer)
+
+    def save_planification(self):
+        db.session.add(self)
+        db.session.commit()
+
+    def update_planification(self, new_data):
+        self.horaireLundi = new_data.horaireLundi
+        self.nbPaireLundi = new_data.nbPaireLundi
+        self.horaireMardi = new_data.horaireMardi
+        self.nbPaireMardi = new_data.nbPaireMardi
+        self.horaireMercredi = new_data.horaireMercredi
+        self.nbPaireMercredi = new_data.nbPaireMercredi
+        self.horaireJeudi = new_data.horaireJeudi
+        self.nbPaireJeudi = new_data.nbPaireJeudi
+        self.horaireVendredi = new_data.horaireVendredi
+        self.nbPaireVendredi = new_data.nbPaireVendredi
+        self.horaireSamedi = new_data.horaireSamedi
+        self.nbPaireSamedi = new_data.nbPaireSamedi
+
+        db.session.commit()
+
+    @classmethod
+    def get_planification_by_modele_regimeHor_chaine(cls, chaine, modele, regimeHoraire):
+        print(chaine, modele, regimeHoraire)
+        return cls.query.filter_by(
+            chaine=chaine,
+            modele=modele,
+            regimeHoraire=regimeHoraire
+        ).first()
+
+    @classmethod
+    def get_planification_by_modele_chaine(cls, chaine, modele):
+        print(chaine, modele)
+        return cls.query.filter_by(
+            chaine=chaine,
+            modele=modele,
+        ).all()
+    def delete_planification(self):
+        db.session.delete(self)
+        db.session.commit()
+    @classmethod
+    def get_plan_by_id(cls, id):
+        return cls.query.filter_by(id=id).first()
+
+    @classmethod
+    def get_planifications_par_numcmd(cls,num_donne):
+        results = (
+            db.session.query(PlanificationChaineModeles)
+            .join(OFSChaine, PlanificationChaineModeles.id == OFSChaine.idPlanification)
+            .filter(OFSChaine.numCommandeOF == num_donne)
+            .all()
+        )
+        return results
 

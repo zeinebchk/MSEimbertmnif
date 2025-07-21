@@ -35,9 +35,10 @@ class GetOfsForUpdate(Schema):
     Modele = fields.String()
     Coloris = fields.String()
     SAIS = fields.String()
-    dateLancement = fields.Date()
+    dateCreation = fields.Date()
     etat = fields.String()
     parcours = fields.String()
+    regimeHoraire=fields.Integer()
 
 class OFSChaineSchema(Schema):
     __tablename__ = 'ofs_chaine'
@@ -103,6 +104,24 @@ class ModelesSchema(Schema):
     __tablename__ = 'code_modeles'
     nom_modele=fields.String()
 class PlanificationSchema(Schema):
+    __tablename__ = 'planifications'
+    id =fields.Integer()
+    modele = fields.String()
+    chaine = fields.String()
+    regimeHoraire = fields.Integer()
+    horaireLundi = fields.Float()
+    nbPaireLundi = fields.Integer()
+    horaireMardi = fields.Float()
+    nbPaireMardi = fields.Integer()
+    horaireMercredi = fields.Float()
+    nbPaireMercredi = fields.Integer()
+    horaireJeudi = fields.Float()
+    nbPaireJeudi = fields.Integer()
+    horaireVendredi = fields.Float()
+    nbPaireVendredi = fields.Integer()
+    horaireSamedi = fields.Float()
+    nbPaireSamedi = fields.Integer()
+class PlanificationChaineModeleSchema(Schema):
     __tablename__ = 'planifications'
     id =fields.Integer()
     modele = fields.String()
